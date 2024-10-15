@@ -75,7 +75,7 @@ def reduce_negative_values(df, first_idx, mid_ID_idx):
     # 데이터프레임 복사
     df_editing = df.copy()
 
-    # 숫자형 데이터로 변환 (first_idx[0] 행부터, first_idx[1] 열부터 끝까지)
+    # first_idx에서 mid_ID_idx까지의 범위 슬라이싱
     df_test = df_editing.iloc[first_idx[0]:mid_ID_idx[0], first_idx[1]:mid_ID_idx[1]].apply(pd.to_numeric, errors='coerce')
 
     # 음수 값이 있는 위치 추적 및 줄인 값 계산
@@ -95,8 +95,8 @@ def reduce_negative_values(df, first_idx, mid_ID_idx):
     for col_idx in range(df_test.shape[1]):
         df_test.iloc[:, col_idx] = df_test.iloc[:, col_idx].apply(lambda x: reduce_and_track(x, col_idx))
 
-    # 수정된 값을 원본 데이터프레임에 다시 반영
-    df_editing.iloc[first_idx[0]:, first_idx[1]:] = df_test
+    # 수정된 값을 원본 데이터프레임에 다시 반영 (first_idx에서 mid_ID_idx까지의 부분)
+    df_editing.iloc[first_idx[0]:mid_ID_idx[0], first_idx[1]:mid_ID_idx[1]] = df_test
 
     # 마지막 행에 줄인 값만큼 더하기
     last_row_index = df_editing.shape[0] - 1
@@ -107,6 +107,7 @@ def reduce_negative_values(df, first_idx, mid_ID_idx):
 
     # 중간 인덱스 값은 그대로 반환 (mid_ID_idx는 행과 열 인덱스이므로 이 경우 변경되지 않음)
     return df_editing, msg, mid_ID_idx
+
 
 
 
