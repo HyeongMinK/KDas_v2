@@ -74,7 +74,7 @@ def main():
         with col2:
             target_code = st.text_input('to')
         with col3:
-            alpha = st.number_input('alpha value', 0.000, 1.000, step=None)
+            alpha = st.number_input('alpha value', 0.000, 1.000, step=0.0001
         with col4:
             if st.button('Edit Data'):
                 result = transfer_to_new_sector(st.session_state['df_editing'], first_idx, origin_code, target_code, alpha)
