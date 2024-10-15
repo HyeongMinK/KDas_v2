@@ -93,7 +93,6 @@ def main():
                 result = reduce_negative_values(st.session_state['df_editing'], first_idx, mid_ID_idx_reduced)
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
-                st.session_state['mid_ID_idx'] = result[2]
         with col3:
             if st.button('적용'):
                 st.session_state['df_edited'] = st.session_state['df_editing'].copy()
