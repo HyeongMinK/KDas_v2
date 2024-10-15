@@ -87,10 +87,10 @@ def main():
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
                 st.session_state['mid_ID_idx'] = result[2]
-        # with col2:
-        #     if st.button('처음부터 다시 수정'):
-        #         del st.session_state['df_editing']
-        #         st.rerun()
+        with col2:
+             if st.button('-값 절반으로 줄이기'):
+                result = st.session_state['df_editing'].applymap(lambda x: x / 2 if x < 0 else x)
+                st.session_state['df_editing'] = result
         with col3:
             if st.button('적용'):
                 st.session_state['df_edited'] = st.session_state['df_editing'].copy()
