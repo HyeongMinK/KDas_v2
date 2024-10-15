@@ -13,7 +13,7 @@ def main():
         first_idx = (6,2)
         number_of_label = 2
     elif mode == 'Korea(1990~2005)':
-        first_idx = (5,3)
+        first_idx = (5,2)
         number_of_label = 1
     else:
         first_idx = 0
