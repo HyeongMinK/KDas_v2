@@ -89,7 +89,7 @@ def main():
                 st.session_state['mid_ID_idx'] = result[2]
         with col2:
              if st.button('-값 절반으로 줄이기'):
-                result = reduce_negative_values(st.session_state['df_editing'], first_idx, st.session_state['mid_ID_idx'])
+                result = reduce_negative_values(st.session_state['df_editing'], first_idx, st.session_state['mid_ID_idx']-1)
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
                 st.session_state['mid_ID_idx'] = result[2]
