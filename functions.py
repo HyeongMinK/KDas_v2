@@ -71,6 +71,18 @@ def get_submatrix_withlabel(df, start_row, start_col, end_row, end_col, first_in
     submatrix_withlabel = df.iloc[row_indexs, col_indexs]
     return submatrix_withlabel
 
+# X 메트릭스에서 음수 값을 절반으로 만드는 함수
+def apply_to_submatrix(df, start_row, start_col, end_row, end_col, first_index_of_df, numberoflabel=2):
+    # 서브매트릭스 추출
+    submatrix_withlabel, row_indexs, col_indexs = get_submatrix_withlabel(df, start_row, start_col, end_row, end_col, first_index_of_df, numberoflabel)
+
+    # 음수 값에만 1/2 적용
+    submatrix_withlabel = submatrix_withlabel.applymap(lambda x: x / 2 if isinstance(x, (int, float)) and x < 0 else x)
+
+    # 원본 데이터프레임에 다시 반영
+    df.iloc[row_indexs, col_indexs] = submatrix_withlabel
+
+    return df
 
 def get_mid_ID_idx(df, first_idx):
     matrix_X = df.iloc[first_idx[0]:, first_idx[1]:].astype(float)

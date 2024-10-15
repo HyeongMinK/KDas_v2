@@ -89,8 +89,7 @@ def main():
                 st.session_state['mid_ID_idx'] = result[2]
         with col2:
              if st.button('-값 절반으로 줄이기'):
-                result = st.session_state['df_editing'].applymap(lambda x: x / 2 if x < 0 else x)
-                st.session_state['df_editing'] = result
+                st.session_state['df_editing'] = apply_to_submatrix(st.session_state['df_editing'],first_idx[0]+2,first_idx[1]+2, st.session_state['mid_ID_idx'][0]-1,st.session_state['mid_ID_idx'][1]-1,first_idx,numberoflabel=2)
         with col3:
             if st.button('적용'):
                 st.session_state['df_edited'] = st.session_state['df_editing'].copy()
