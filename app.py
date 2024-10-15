@@ -9,11 +9,11 @@ def main():
     st.sidebar.header("다운로드")
     st.title("DasHboard beta 1.2")
     mode = st.radio('모드 선택', ['Korea', 'China', 'Manual'])
-    if mode == 'Korea':
+    if mode == 'Korea(2010~)':
         first_idx = (6,2)
         number_of_label = 2
-    elif mode == 'China':
-        first_idx = (6,2)
+    elif mode == 'China(1990~2020)':
+        first_idx = (5,2)
         number_of_label = 1
     else:
         first_idx = 0
