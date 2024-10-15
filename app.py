@@ -80,7 +80,7 @@ def main():
                 result = transfer_to_new_sector(st.session_state['df_editing'], first_idx, origin_code, target_code, alpha)
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
-        col1, col3 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             if st.button('0인 행(열) 삭제'):
                 result = remove_zero_series(st.session_state['df_editing'], first_idx, st.session_state['mid_ID_idx'])
