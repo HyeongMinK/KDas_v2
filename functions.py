@@ -76,7 +76,7 @@ def reduce_negative_values(df, first_idx, mid_ID_idx):
     df_editing = df.copy()
 
     # 숫자형 데이터로 변환 (first_idx[0] 행부터, first_idx[1] 열부터 끝까지)
-    df_test = df_editing.iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
+    df_test = df_editing.iloc[first_idx[0]:mid_ID_idx[0], first_idx[1]:mid_ID_idx[1]].apply(pd.to_numeric, errors='coerce')
 
     # 음수 값이 있는 위치 추적 및 줄인 값 계산
     reduced_values_per_column = {}
