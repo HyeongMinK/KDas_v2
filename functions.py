@@ -71,18 +71,44 @@ def get_submatrix_withlabel(df, start_row, start_col, end_row, end_col, first_in
     submatrix_withlabel = df.iloc[row_indexs, col_indexs]
     return submatrix_withlabel
 
-# X 메트릭스에서 음수 값을 절반으로 만드는 함수
-def apply_to_submatrix(df, start_row, start_col, end_row, end_col, first_index_of_df, numberoflabel=2):
-    # 서브매트릭스 추출
-    submatrix_withlabel, row_indexs, col_indexs = get_submatrix_withlabel(df, start_row, start_col, end_row, end_col, first_index_of_df, numberoflabel)
+def reduce_negative_values(df, first_idx, mid_ID_idx):
+    # 데이터프레임 복사
+    df_editing = df.copy()
 
-    # 음수 값에만 1/2 적용
-    submatrix_withlabel = submatrix_withlabel.applymap(lambda x: x / 2 if isinstance(x, (int, float)) and x < 0 else x)
+    # 숫자형 데이터로 변환 (first_idx[0] 행부터, first_idx[1] 열부터 끝까지)
+    df_test = df_editing.iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
 
-    # 원본 데이터프레임에 다시 반영
-    df.iloc[row_indexs, col_indexs] = submatrix_withlabel
+    # 음수 값이 있는 위치 추적 및 줄인 값 계산
+    reduced_values_per_column = {}
 
-    return df
+    def reduce_and_track(value, col_index):
+        if value < 0:
+            # 줄일 값 저장 (음수 값의 절반)
+            reduced_value = value / 2
+            if col_index not in reduced_values_per_column:
+                reduced_values_per_column[col_index] = 0
+            reduced_values_per_column[col_index] += value - reduced_value  # 원래 값 - 절반으로 줄인 값
+            return reduced_value
+        return value
+
+    # 음수인 값만 1/2로 줄이면서 추적
+    for col_idx in range(df_test.shape[1]):
+        df_test.iloc[:, col_idx] = df_test.iloc[:, col_idx].apply(lambda x: reduce_and_track(x, col_idx))
+
+    # 수정된 값을 원본 데이터프레임에 다시 반영
+    df_editing.iloc[first_idx[0]:, first_idx[1]:] = df_test
+
+    # 마지막 행에 줄인 값만큼 더하기
+    last_row_index = df_editing.shape[0] - 1
+    for col_idx, total_reduced in reduced_values_per_column.items():
+        df_editing.iloc[last_row_index, first_idx[1] + col_idx] -= total_reduced
+
+    msg = "음수 값들을 절반으로 줄이고, 줄인 값을 마지막 행에 더했습니다."
+
+    # 중간 인덱스 값은 그대로 반환 (mid_ID_idx는 행과 열 인덱스이므로 이 경우 변경되지 않음)
+    return df_editing, msg, mid_ID_idx
+
+
 
 def get_mid_ID_idx(df, first_idx):
     matrix_X = df.iloc[first_idx[0]:, first_idx[1]:].astype(float)
