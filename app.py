@@ -162,7 +162,7 @@ def main():
             # 행렬을 순회하며 조건에 맞지 않는 값의 위치를 찾음
             for i in range(leontief.shape[0]):
                 for j in range(leontief.shape[1]):
-                    value = leontief[i, j]
+                    value = leontief.iloc[i, j]
                     if not (-0.1 <= value <= 2):
                         invalid_positions.append((i+2, j+2, value))
             # 결과 출력
