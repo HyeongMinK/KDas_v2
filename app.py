@@ -158,6 +158,20 @@ def main():
             st.write(st.session_state['df_normalized_with_label'])
         with col4:
             st.write(st.session_state['df_for_leontief_with_label'])
+            invalid_positions = []
+            # 행렬을 순회하며 조건에 맞지 않는 값의 위치를 찾음
+            for i in range(leontief.shape[0]):
+                for j in range(leontief.shape[1]):
+                    value = leontief[i, j]
+                    if not (-0.1 <= value <= 2):
+                        invalid_positions.append((i+2, j+2, value))
+            # 결과 출력
+            if invalid_positions:
+                st.write("조건에 맞지 않는 위치와 값:")
+                for pos in invalid_positions:
+                    st.write(f"위치: {pos[:2]}, 값: {pos[2]}")
+            else:
+                st.write("모든 값이 -0.1 ~ 2 사이의 조건을 만족합니다.")
         with st.sidebar.expander('normalized, leontief inverse'):
             donwload_data(st.session_state['df_normalized_with_label'], 'normalized')
             donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
