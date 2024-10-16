@@ -167,7 +167,7 @@ def main():
                         invalid_positions.append((i+2, j+2, value))
             # 결과 출력
             if invalid_positions:
-                st.write("조건에 맞지 않는 위치와 값:")
+                st.write("조건(-0.1 ~ 2.0)에 맞지 않는 위치와 값:")
                 for pos in invalid_positions:
                     st.write(f"위치: {pos[:2]}, 값: {pos[2]}")
             else:
