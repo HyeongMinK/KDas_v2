@@ -11,12 +11,15 @@ def main():
     mode = st.radio('모드 선택', ['Korea(2010~2020)', 'Korea(1990~2005)', 'Manual'])
     if mode == 'Korea(2010~2020)':
         first_idx = (6,2)
+        subplus_edit =False
         number_of_label = 2
     elif mode == 'Korea(1990~2005)':
         first_idx = (5,2)
+        subplus_edit =True
         number_of_label = 2
     else:
         first_idx = 0
+        subplus_edit =False
         number_of_label = 2
 
     if 'number_of_divide' not in st.session_state:
@@ -30,6 +33,9 @@ def main():
             st.write(st.session_state['uploaded_file'].name)
             st.session_state['df'] = load_data(st.session_state.uploaded_file)
             st.session_state['mid_ID_idx'] = get_mid_ID_idx(st.session_state['df'], first_idx)
+            if subplus_edit:
+                st.session_state['mid_ID_idx'][0]+=1
+                st.session_state['mid_ID_idx'][1]+=1
             st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:] = st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
 
     if 'df' in st.session_state:
