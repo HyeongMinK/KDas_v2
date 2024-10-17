@@ -38,6 +38,10 @@ def main():
                     string_locations.append((row_idx, col_idx, value))
 
         return string_locations
+    # 문자열이 포함된 위치를 NA로 대체하는 함수
+    def replace_string_with_na(df, string_locations):
+        for row_idx, col_idx, _ in string_locations:
+            df.iloc[row_idx, col_idx] = pd.NA  # 해당 위치의 값을 pd.NA로 대체
 
     # 파일 업로드 섹션s
     st.session_state['uploaded_file'] = st.file_uploader("여기에 파일을 드래그하거나 클릭하여 업로드하세요.", type=['xls', 'xlsx'])
@@ -49,6 +53,8 @@ def main():
             #st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].dropna(inplace = True)
             # 문자열이 포함된 위치 찾기
             string_values = find_string_values(st.session_state['df'], first_idx)
+            # 문자열이 포함된 값을 NA로 대체
+            replace_string_with_na(st.session_state['df'], string_values)
             st.write(string_values)
             st.session_state['mid_ID_idx'] = get_mid_ID_idx(st.session_state['df'], first_idx)
             st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:] = st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
