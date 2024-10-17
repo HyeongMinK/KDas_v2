@@ -45,7 +45,8 @@ def main():
         if st.session_state['uploaded_file']:
             st.write(st.session_state['uploaded_file'].name)
             st.session_state['df'] = load_data(st.session_state.uploaded_file)
-            st.session_state['df'].replace(' ', 0)
+            st.session_state['df'].replace(' ', pd.NA)
+            st.session_state['df'].replace(pd.NA, 0)
             # 문자열이 포함된 위치 찾기
             string_values = find_string_values(st.session_state['df'], first_idx)
             st.write(string_values)
