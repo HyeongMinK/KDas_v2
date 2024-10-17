@@ -197,13 +197,28 @@ def main():
         subtracted_matrix = unit_matrix - tmp
         leontief = np.linalg.inv(subtracted_matrix.values)
         leontief = pd.DataFrame(leontief)
-        # 각 행의 합을 계산하고 새로운 열 추가
-        leontief['Row_Sum'] = leontief.sum(axis=1)
-
-        # 각 열의 합을 계산하고 새로운 행 추가
-        leontief.loc['Column_Sum'] = leontief.sum(axis=0)
         st.session_state['df_for_leontief_with_label'].iloc[2:, 2:] = leontief
+        # 현재 DataFrame의 크기
+        current_df = st.session_state['df_for_leontief_with_label']
 
+        # 새로운 크기 정의
+        new_n = current_df.shape[0] - 2 + 1  # n+1 (기존 n은 2행 제거 후의 수)
+        new_m = current_df.shape[1] - 2 + 1  # n+1 (기존 n은 2열 제거 후의 수)
+
+        # 새로운 DataFrame 생성 (NaN으로 초기화)
+        new_df = pd.DataFrame(np.nan, index=range(new_n), columns=range(new_m))
+
+        # leontief 데이터를 넣기
+        new_df.iloc[:new_n-1, :new_m-1] = leontief
+
+        # 각 행의 합을 마지막 열에 추가
+        new_df.iloc[:, -1] = new_df.iloc[:, :-1].sum(axis=1)
+
+        # 각 열의 합을 마지막 행에 추가
+        new_df.iloc[-1, :-1] = new_df.iloc[:-1, :].sum(axis=0)
+
+        # 새로운 DataFrame을 기존 DataFrame에 업데이트
+        st.session_state['df_for_leontief_with_label'] = new_df
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
         st.subheader('Leontief 과정 matrices')
