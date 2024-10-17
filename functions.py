@@ -117,7 +117,7 @@ def get_mid_ID_idx(df, first_idx):
 
     # NaN 값을 0이나 다른 기본값으로 채우기 (필요에 따라 선택)
     df_cleaned = df_cleaned.fillna(0)
-    matrix_X = df_cleaned.iloc[first_idx[0]:, first_idx[1]:].astype(float)
+    matrix_X = df_cleaned.astype(float)
     row_cnt, col_cnt, row_sum, col_sum = 0, 0, 0, 0
     for v in matrix_X.iloc[0]:
         if abs(row_sum - v) < 0.001:
