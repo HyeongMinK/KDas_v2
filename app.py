@@ -24,7 +24,20 @@ def main():
 
     if 'number_of_divide' not in st.session_state:
         st.session_state['number_of_divide'] = 0
-    
+    def find_string_values(df, first_idx):
+        # 특정 구간의 데이터 선택
+        selected_df = df.iloc[first_idx[0]:, first_idx[1]:]
+
+        # 문자열이 포함된 셀의 위치를 저장할 리스트
+        string_locations = []
+
+        # 모든 셀을 순회하며 문자열이 있는지 확인
+        for row_idx, row in selected_df.iterrows():
+            for col_idx, value in row.items():
+                if isinstance(value, str):  # 문자열인지 확인
+                    string_locations.append((row_idx, col_idx, value))
+
+        return string_locations
 
     # 파일 업로드 섹션s
     st.session_state['uploaded_file'] = st.file_uploader("여기에 파일을 드래그하거나 클릭하여 업로드하세요.", type=['xls', 'xlsx'])
@@ -34,6 +47,9 @@ def main():
             st.session_state['df'] = load_data(st.session_state.uploaded_file)
             st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].replace(' ', pd.NA)
             st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].dropna(inplace=True)  # NaN이 포함된 행 제거
+            # 문자열이 포함된 위치 찾기
+            string_values = find_string_values(st.session_state['df'], first_idx)
+            st.write(string_values)
             st.session_state['mid_ID_idx'] = get_mid_ID_idx(st.session_state['df'], first_idx)
             st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:] = st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
             if subplus_edit:
