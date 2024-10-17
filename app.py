@@ -62,6 +62,7 @@ def main():
 
     if 'df_editing' in st.session_state:
         st.header("DataFrame을 수정합니다.")
+        st.markdown(f"### - 값 나누는 것: **{st.session_state['number_of_divide']}** 번 적용")
         col1, col2, col3 = st.columns(3)
         with col1:
             new_code = st.text_input('새로 삽입할 산업의 code를 입력하세요')
@@ -98,7 +99,6 @@ def main():
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
                 st.session_state['number_of_divide'] +=1
-                st.write("-값 나누는 것",st.session_state['number_of_divide'],"번 적용")
         with col3:
             if st.button('적용'):
                 st.session_state['df_edited'] = st.session_state['df_editing'].copy()
@@ -176,7 +176,7 @@ def main():
         diagonal_invalid_positions = []
         for i in range(leontief.shape[0]):
             value = leontief.iloc[i, i]
-            if value <= 1:
+            if value < 1:
                 diagonal_invalid_positions.append((i + 2, i + 2, value))  # 위치 조정 (+2)
 
         # 결과 출력
@@ -189,7 +189,7 @@ def main():
 
         # 대각 원소 조건 확인 및 결과 출력
         if diagonal_invalid_positions:
-            st.write("대각 원소 중 1 이하인 값이 있습니다:")
+            st.write("대각 원소 중 1 미만인 값이 있습니다:")
             for pos in diagonal_invalid_positions:
                 st.write(f"위치: {pos[:2]}, 값: {pos[2]}")
         else:
