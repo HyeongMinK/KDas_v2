@@ -197,7 +197,13 @@ def main():
         subtracted_matrix = unit_matrix - tmp
         leontief = np.linalg.inv(subtracted_matrix.values)
         leontief = pd.DataFrame(leontief)
+        # 각 행의 합을 계산하고 새로운 열 추가
+        leontief['Row_Sum'] = leontief.sum(axis=1)
+
+        # 각 열의 합을 계산하고 새로운 행 추가
+        leontief.loc['Column_Sum'] = leontief.sum(axis=0)
         st.session_state['df_for_leontief_with_label'].iloc[2:, 2:] = leontief
+
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
         st.subheader('Leontief 과정 matrices')
