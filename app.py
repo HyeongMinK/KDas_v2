@@ -41,7 +41,7 @@ def main():
 
                 # 수정된 값을 다시 session_state에 저장
                 st.session_state['mid_ID_idx'] = tuple(mid_ID_idx)  # 필요 시 튜플로 다시 저장
-                st.write("성공")
+                st.write(st.session_state['mid_ID_idx'])
             st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:] = st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
 
     if 'df' in st.session_state:
