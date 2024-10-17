@@ -36,8 +36,8 @@ def main():
             if subplus_edit:
                 # 튜플을 리스트로 변환하여 수정
                 mid_ID_idx = list(st.session_state['mid_ID_idx'])  # 리스트로 변환
-                mid_ID_idx[0] += 1
-                mid_ID_idx[1] += 1
+                mid_ID_idx[0] -= 1
+                mid_ID_idx[1] -= 1
 
                 # 수정된 값을 다시 session_state에 저장
                 st.session_state['mid_ID_idx'] = tuple(mid_ID_idx)  # 필요 시 튜플로 다시 저장
