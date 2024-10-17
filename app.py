@@ -32,6 +32,8 @@ def main():
         if st.session_state['uploaded_file']:
             st.write(st.session_state['uploaded_file'].name)
             st.session_state['df'] = load_data(st.session_state.uploaded_file)
+            st.session_state['df'].replace('', pd.NA, inplace=True)  # 공백을 NaN으로 변환
+            st.session_state['df'].dropna(inplace=True)  # NaN이 포함된 행 제거
             st.session_state['mid_ID_idx'] = get_mid_ID_idx(st.session_state['df'], first_idx)
             st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:] = st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
             if subplus_edit:
