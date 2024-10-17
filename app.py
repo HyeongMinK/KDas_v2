@@ -43,6 +43,22 @@ def main():
         for row_idx, col_idx, _ in string_locations:
             df.iloc[row_idx, col_idx] = np.nan  # 해당 위치의 값을 pd.NA로 대체
 
+    def slice_until_first_non_nan_row(df):
+        # DataFrame의 맨 아래부터 위로 순회하며 NaN이 아닌 첫 번째 행 찾기
+        last_valid_index = None
+        for row_idx in reversed(range(df.shape[0])):  # 아래에서 위로 순회
+            if not df.iloc[row_idx].isna().all():  # NaN이 아닌 행을 찾으면
+                last_valid_index = row_idx
+                break
+
+        # NaN이 아닌 행까지 슬라이싱 (찾지 못한 경우 전체 슬라이스)
+        if last_valid_index is not None:
+            sliced_df = df.iloc[:last_valid_index + 1]
+        else:
+            sliced_df = pd.DataFrame()  # 모든 행이 NaN인 경우 빈 DataFrame 반환
+
+        return sliced_df, last_valid_index
+
     # 파일 업로드 섹션s
     st.session_state['uploaded_file'] = st.file_uploader("여기에 파일을 드래그하거나 클릭하여 업로드하세요.", type=['xls', 'xlsx'])
     if 'df' not in st.session_state:
@@ -55,6 +71,8 @@ def main():
             string_values = find_string_values(st.session_state['df'], first_idx)
             # 문자열이 포함된 값을 NA로 대체
             replace_string_with_na(st.session_state['df'], string_values)
+            # 사용 예시
+            st.session_state['df'], last_valid_index = slice_until_first_non_nan_row(st.session_state['df'])
             st.write(string_values)
             st.session_state['mid_ID_idx'] = get_mid_ID_idx(st.session_state['df'], first_idx)
             st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:] = st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
