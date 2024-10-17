@@ -33,16 +33,9 @@ def main():
             st.write(st.session_state['uploaded_file'].name)
             st.session_state['df'] = load_data(st.session_state.uploaded_file)
             st.session_state['mid_ID_idx'] = get_mid_ID_idx(st.session_state['df'], first_idx)
-            if subplus_edit:
-                # 튜플을 리스트로 변환하여 수정
-                mid_ID_idx = list(st.session_state['mid_ID_idx'])  # 리스트로 변환
-                mid_ID_idx[0] -= 1
-                mid_ID_idx[1] -= 1
-
-                # 수정된 값을 다시 session_state에 저장
-                st.session_state['mid_ID_idx'] = tuple(mid_ID_idx)  # 필요 시 튜플로 다시 저장
-                st.write(st.session_state['mid_ID_idx'])
             st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:] = st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
+            if subplus_edit:
+                st.session_state['df']=st.session_state['df'].iloc[:-1]
 
     if 'df' in st.session_state:
         uploaded_matrix_X = get_submatrix_withlabel(st.session_state['df'], first_idx[0], first_idx[1], st.session_state['mid_ID_idx'][0], st.session_state['mid_ID_idx'][1], first_idx, numberoflabel=number_of_label)
