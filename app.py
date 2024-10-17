@@ -18,7 +18,9 @@ def main():
     else:
         first_idx = 0
         number_of_label = 2
-    st.session_state['number_of_divide'] =0
+        
+    if 'number_of_divide' in st.session_state:
+        st.session_state['number_of_divide'] = 0
     
 
     # 파일 업로드 섹션
