@@ -102,7 +102,7 @@ def main():
             if st.button('적용'):
                 st.session_state['df_edited'] = st.session_state['df_editing'].copy()
         st.write(st.session_state['df_editing'])
-        st.markdown(f"# - 값 나누는 것: **{st.session_state['number_of_divide']}** 번 적용")
+        st.markdown(f"##### - 값 나누는 것: **{st.session_state['number_of_divide']}** 번 적용")
     if 'df_edited' in st.session_state:
         st.header('수정 된 Excel파일 입니다.')
         edited_matrix_X = get_submatrix_withlabel(st.session_state['df_edited'], first_idx[0],first_idx[1], st.session_state['mid_ID_idx'][0], st.session_state['mid_ID_idx'][1], first_idx, numberoflabel = 2)
