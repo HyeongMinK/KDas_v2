@@ -18,6 +18,8 @@ def main():
     else:
         first_idx = 0
         number_of_label = 2
+    st.session_state['number_of_divide'] =0
+    
 
     # 파일 업로드 섹션
     st.session_state['uploaded_file'] = st.file_uploader("여기에 파일을 드래그하거나 클릭하여 업로드하세요.", type=['xls', 'xlsx'])
@@ -93,6 +95,8 @@ def main():
                 result = reduce_negative_values(st.session_state['df_editing'], first_idx, mid_ID_idx_reduced)
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
+                st.session_state['number_of_divide'] +=1
+                st.write("-값 나누는 것",st.session_state['number_of_divide'],"번 적용")
         with col3:
             if st.button('적용'):
                 st.session_state['df_edited'] = st.session_state['df_editing'].copy()
