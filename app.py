@@ -45,20 +45,8 @@ def main():
         if st.session_state['uploaded_file']:
             st.write(st.session_state['uploaded_file'].name)
             st.session_state['df'] =load_data(st.session_state.uploaded_file)
-           # 선택된 구간의 데이터 가져오기
-            subset_df = st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:]
-
-            # 빈 문자열을 NaN으로 변환
-            subset_df = subset_df.replace(' ', pd.NA)
-
-            # NaN 제거 후 새로운 데이터 생성 (줄어든 행 반영)
-            cleaned_subset = subset_df.dropna()
-
-            # 원본 데이터에서 해당 부분을 제거하고, 줄어든 데이터로 재할당
-            st.session_state['df'] = pd.concat([
-                st.session_state['df'].iloc[:first_idx[0], :],  # 위쪽 부분 유지
-                cleaned_subset.reset_index(drop=True)  # NaN 제거된 부분 추가
-            ], axis=0).reset_index(drop=True)
+            st.session_state['df'].iloc[first_idx[0]:, first_idx[1]:].replace(' ', pd.NA, inplace=True)
+            st.session_state['df'][first_idx[0]:, first_idx[1]:].dropna(inplace = True)
             # 문자열이 포함된 위치 찾기
             string_values = find_string_values(st.session_state['df'], first_idx)
             st.write(string_values)
