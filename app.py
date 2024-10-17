@@ -23,7 +23,7 @@ def main():
         st.session_state['number_of_divide'] = 0
     
 
-    # 파일 업로드 섹션
+    # 파일 업로드 섹션s
     st.session_state['uploaded_file'] = st.file_uploader("여기에 파일을 드래그하거나 클릭하여 업로드하세요.", type=['xls', 'xlsx'])
     if 'df' not in st.session_state:
         if st.session_state['uploaded_file']:
@@ -165,19 +165,35 @@ def main():
         with col4:
             st.write(st.session_state['df_for_leontief_with_label'])
             invalid_positions = []
-            # 행렬을 순회하며 조건에 맞지 않는 값의 위치를 찾음
-            for i in range(leontief.shape[0]):
-                for j in range(leontief.shape[1]):
-                    value = leontief.iloc[i, j]
-                    if not (-0.1 <= value <= 2):
-                        invalid_positions.append((i+2, j+2, value))
-            # 결과 출력
-            if invalid_positions:
-                st.write("조건(-0.1 ~ 2.0)에 맞지 않는 위치와 값:")
-                for pos in invalid_positions:
-                    st.write(f"위치: {pos[:2]}, 값: {pos[2]}")
-            else:
-                st.write("모든 값이 -0.1 ~ 2 사이의 조건을 만족합니다.")
+        # 1. 행렬을 순회하며 -0.1 ~ 2 범위를 벗어난 값의 위치를 찾음
+        for i in range(leontief.shape[0]):
+            for j in range(leontief.shape[1]):
+                value = leontief.iloc[i, j]
+                if not (-0.1 <= value <= 2):
+                    invalid_positions.append((i + 2, j + 2, value))  # 위치 조정 (+2)
+
+        # 2. 대각 원소 중 1 이하인 값의 위치와 값 저장
+        diagonal_invalid_positions = []
+        for i in range(leontief.shape[0]):
+            value = leontief.iloc[i, i]
+            if value <= 1:
+                diagonal_invalid_positions.append((i + 2, i + 2, value))  # 위치 조정 (+2)
+
+        # 결과 출력
+        if invalid_positions:
+            st.write("조건(-0.1 ~ 2.0)에 맞지 않는 위치와 값:")
+            for pos in invalid_positions:
+                st.write(f"위치: {pos[:2]}, 값: {pos[2]}")
+        else:
+            st.write("모든 값이 -0.1 ~ 2 사이의 조건을 만족합니다.")
+
+        # 대각 원소 조건 확인 및 결과 출력
+        if diagonal_invalid_positions:
+            st.write("대각 원소 중 1 이하인 값이 있습니다:")
+            for pos in diagonal_invalid_positions:
+                st.write(f"위치: {pos[:2]}, 값: {pos[2]}")
+        else:
+            st.write("모든 대각 원소가 1보다 큽니다.")
         with st.sidebar.expander('normalized, leontief inverse'):
             donwload_data(st.session_state['df_normalized_with_label'], 'normalized')
             donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
