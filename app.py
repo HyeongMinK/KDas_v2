@@ -18,8 +18,8 @@ def main():
     else:
         first_idx = 0
         number_of_label = 2
-        
-    if 'number_of_divide' in st.session_state:
+
+    if 'number_of_divide' not in st.session_state:
         st.session_state['number_of_divide'] = 0
     
 
