@@ -197,7 +197,41 @@ def main():
         subtracted_matrix = unit_matrix - tmp
         leontief = np.linalg.inv(subtracted_matrix.values)
         leontief = pd.DataFrame(leontief)
-        st.session_state['df_for_leontief_with_label'].iloc[2:, 2:] = leontief
+                # 현재 DataFrame을 가져오기
+        current_df = st.session_state['df_for_leontief_with_label']
+
+        # 기존 DataFrame에서 2행과 2열을 제거한 후, 크기를 정의
+        existing_rows = current_df.shape[0] - 2  # 기존 DataFrame의 행 수
+        existing_cols = current_df.shape[1] - 2  # 기존 DataFrame의 열 수
+
+        # leontief 배열의 크기
+        leontief_rows, leontief_cols = leontief.shape
+
+        # 새로운 DataFrame 생성 (NaN으로 초기화)
+        new_df = pd.DataFrame(np.nan, index=range(existing_rows + 1), columns=range(existing_cols + 1))
+
+        # leontief의 크기가 기존 DataFrame보다 한 행과 한 열이 더 많을 때
+        if leontief_rows == existing_rows and leontief_cols == existing_cols:
+            # leontief 데이터를 새로운 DataFrame의 적절한 부분에 삽입
+            new_df.iloc[:existing_rows, :existing_cols] = leontief  # 기존 데이터 부분에 할당
+
+            # 각 행의 합을 마지막 열에 추가
+            new_df.iloc[:, -1] = new_df.iloc[:, :-1].sum(axis=1)
+
+            # 각 열의 합을 마지막 행에 추가
+            new_df.iloc[-1, :-1] = new_df.iloc[:-1, :].sum(axis=0)
+
+            # N*N 배열에서 N+1*N+1로 변환
+            leontief_with_sums = np.zeros((leontief_rows + 1, leontief_cols + 1))
+            leontief_with_sums[:-1, :-1] = leontief  # 기존 leontief 배열을 넣기
+            leontief_with_sums[-1, :-1] = leontief.sum(axis=0)  # 마지막 행에 각 열의 합
+            leontief_with_sums[:-1, -1] = leontief.sum(axis=1)  # 마지막 열에 각 행의 합
+
+            # 최종적으로 N+1*N+1 배열을 새로운 DataFrame에 업데이트
+            new_df.iloc[:leontief_with_sums.shape[0], :leontief_with_sums.shape[1]] = leontief_with_sums
+
+        # 새로운 DataFrame을 기존 DataFrame에 업데이트
+        st.session_state['df_for_leontief_with_label'] = new_df
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
         st.subheader('Leontief 과정 matrices')
