@@ -194,7 +194,7 @@ def main():
         st.session_state['df_for_leontief_with_label'] = st.session_state['df_for_leontief'].copy()
         tmp = st.session_state['df_for_leontief_without_label'].copy()
         tmp = tmp.apply(pd.to_numeric, errors='coerce')
-        tmp = tmp.divide(st.session_state['added_value_denominator_replaced'], axis=1) ##d
+        tmp = tmp.divide(st.session_state['normalization_denominator_replaced'], axis=1) ##d
 
         tmp1 = st.session_state['df_for_leontief_without_label'].copy()
         tmp1 = tmp1.apply(pd.to_numeric, errors='coerce')
