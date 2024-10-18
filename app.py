@@ -251,7 +251,7 @@ def main():
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
         st.subheader('Leontief 과정 matrices')
-        col1, col2, col3, col4,col5 = st.tabs(['edited', 'normailization denominator', 'normalized', 'leontief inverse','added value demominator'])
+        col1, col2, col3, col4,col5,col6 = st.tabs(['edited', 'normailization denominator', 'normalized', 'leontief inverse','added value demominator','added value'])
         with col1:
             st.write(st.session_state['df_for_leontief'])
         with col2:
@@ -262,8 +262,9 @@ def main():
             st.write(st.session_state['df_for_leontief_with_label'])
             invalid_positions = []
         with col5:
+            st.write(st.session_state['added_value_denominator'])
+        with col6:
             st.write(st.session_state['df_for_added_value'])
-            invalid_positions = []
         # 1. 행렬을 순회하며 -0.1 ~ 2 범위를 벗어난 값의 위치를 찾음
         for i in range(leontief.shape[0]):
             for j in range(leontief.shape[1]):
