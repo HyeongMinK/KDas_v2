@@ -205,13 +205,9 @@ def main():
         tmp = tmp.apply(pd.to_numeric, errors='coerce')
         tmp = tmp.divide(st.session_state['normalization_denominator_replaced'], axis=1) ##d
 
-        tmp1 = st.session_state['df_for_leontief_without_label'].copy()
-        tmp1 = tmp1.apply(pd.to_numeric, errors='coerce')
-        tmp1 = tmp1.divide(st.session_state['added_value_denominator_replaced'], axis=1) ##d
-
         tmp2 = st.session_state['df_for_r_without_label'].copy()
         tmp2 = tmp2.apply(pd.to_numeric, errors='coerce')
-        tmp2 = tmp2.divide(st.session_state['added_value_denominator_replaced'], axis=1) ##d
+        tmp2 = tmp2.divide(st.session_state['normalization_denominator_replaced'], axis=1) ##d
     
         st.session_state['df_for_leontief_with_label'].iloc[2:, 2:] = tmp
         st.session_state['df_for_r_with_label'].iloc[2:, 2:] = tmp2
@@ -265,7 +261,7 @@ def main():
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
         st.subheader('Leontief 과정 matrices')
-        col1, col2, col3, col4,col5,col6,col7 = st.tabs(['edited', 'normailization denominator', 'normalized', 'leontief inverse','added value demominator','added value_X','added_value_R'])
+        col1, col2, col3, col4,col5= st.tabs(['edited', 'normailization denominator', 'normalized', 'leontief inverse','added_value_R'])
         with col1:
             st.write(st.session_state['df_for_leontief'])
         with col2:
@@ -276,11 +272,8 @@ def main():
             st.write(st.session_state['df_for_leontief_with_label'])
             invalid_positions = []
         with col5:
-            st.write(st.session_state['added_value_denominator'])
-        with col6:
-            st.write(st.session_state['df_for_added_value'])
-        with col7:
-            st.session_state['df_for_r_with_label']
+            st.write(st.session_state['df_for_r_with_label'])
+
         # 1. 행렬을 순회하며 -0.1 ~ 2 범위를 벗어난 값의 위치를 찾음
         for i in range(leontief.shape[0]):
             for j in range(leontief.shape[1]):
