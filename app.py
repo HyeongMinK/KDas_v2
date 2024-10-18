@@ -184,14 +184,27 @@ def main():
         st.session_state['normalization_denominator'] = st.session_state['df_edited'].iloc[st.session_state['df_edited'].shape[0]-1, first_idx[1]:st.session_state['mid_ID_idx'][1]]
         st.session_state['normalization_denominator'] = pd.to_numeric(st.session_state['normalization_denominator'])
         st.session_state['normalization_denominator_replaced'] = st.session_state['normalization_denominator'].replace(0, np.finfo(float).eps)
+        st.session_state['added_value_denominator'] = st.session_state['df_edited'].iloc[st.session_state['df_edited'].shape[0] - 2, first_idx[1]:st.session_state['mid_ID_idx'][1]]
+        st.session_state['added_value_denominator'] = pd.to_numeric(st.session_state['added_value_denominator'])
+        st.session_state['added_value_denominator_replaced'] = st.session_state['added_value_denominator'].replace(0, np.finfo(float).eps)
+
         
     if 'df_for_leontief' in st.session_state:
         st.session_state['df_for_leontief_without_label'] = st.session_state['df_for_leontief'].iloc[2:, 2:].copy()
         st.session_state['df_for_leontief_with_label'] = st.session_state['df_for_leontief'].copy()
         tmp = st.session_state['df_for_leontief_without_label'].copy()
         tmp = tmp.apply(pd.to_numeric, errors='coerce')
-        tmp = tmp.divide(st.session_state['normalization_denominator_replaced'], axis=1)
+        tmp = tmp.divide(st.session_state['added_value_denominator_replaced'], axis=1) ##d
+
+        tmp1 = st.session_state['df_for_leontief_without_label'].copy()
+        tmp1 = tmp1.apply(pd.to_numeric, errors='coerce')
+        tmp1 = tmp1.divide(st.session_state['added_value_denominator_replaced'], axis=1) ##d
+    
         st.session_state['df_for_leontief_with_label'].iloc[2:, 2:] = tmp
+
+        st.session_state['df_for_added_value']=st.session_state['df_for_leontief_with_label'].copy()
+        st.session_state['df_for_added_value'].iloc[2:, 2:] = tmp1
+
         st.session_state['df_normalized_with_label'] = st.session_state['df_for_leontief_with_label'].copy()
         unit_matrix = np.eye(tmp.shape[0])
         subtracted_matrix = unit_matrix - tmp
@@ -238,7 +251,7 @@ def main():
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
         st.subheader('Leontief 과정 matrices')
-        col1, col2, col3, col4 = st.tabs(['edited', 'normailization denominator', 'normalized', 'leontief inverse'])
+        col1, col2, col3, col4,col5 = st.tabs(['edited', 'normailization denominator', 'normalized', 'leontief inverse','added value demominator'])
         with col1:
             st.write(st.session_state['df_for_leontief'])
         with col2:
@@ -247,6 +260,9 @@ def main():
             st.write(st.session_state['df_normalized_with_label'])
         with col4:
             st.write(st.session_state['df_for_leontief_with_label'])
+            invalid_positions = []
+        with col5:
+            st.write(st.session_state['df_for_added_value'])
             invalid_positions = []
         # 1. 행렬을 순회하며 -0.1 ~ 2 범위를 벗어난 값의 위치를 찾음
         for i in range(leontief.shape[0]):
