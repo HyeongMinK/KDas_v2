@@ -197,7 +197,7 @@ def main():
         subtracted_matrix = unit_matrix - tmp
         leontief = np.linalg.inv(subtracted_matrix.values)
         leontief = pd.DataFrame(leontief)
-                # 현재 DataFrame을 가져오기
+        # 현재 DataFrame을 가져오기
         current_df = st.session_state['df_for_leontief_with_label']
 
         # 기존 DataFrame에서 2행과 2열을 제거한 후, 크기를 정의
@@ -226,7 +226,7 @@ def main():
         new_df = pd.DataFrame(leontief_with_sums)
 
         # 새로운 DataFrame을 기존 DataFrame에 업데이트
-        st.session_state['df_for_leontief_with_label'] = new_df
+        st.session_state['df_for_leontief_with_label'].iloc[2:, 2:] = new_df
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
         st.subheader('Leontief 과정 matrices')
