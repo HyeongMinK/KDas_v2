@@ -258,7 +258,7 @@ def main():
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
         st.subheader('Leontief 과정 matrices')
-        col1, col2, col3, col4,col5= st.tabs(['edited', 'normailization denominator', 'normalized', 'leontief inverse','added_value_R'])
+        col1, col2, col3, col4,col5= st.tabs(['edited', 'normailization denominator', '투입계수행렬', 'leontief inverse','부가가치계수행렬'])
         with col1:
             st.write(st.session_state['df_for_leontief'])
         with col2:
