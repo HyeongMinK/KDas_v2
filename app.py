@@ -251,8 +251,8 @@ def main():
 
         # 새로운 DataFrame을 기존 DataFrame의 적절한 위치에 업데이트
         current_df.iloc[2:2 + new_df.shape[0], 2:2 + new_df.shape[1]] = new_df
-        current_df.iloc[1,-1]="hi1"
-        current_df.iloc[-1,1]="hi2"
+        current_df.iloc[1,-1]="감응도계수"
+        current_df.iloc[-1,1]="영향력계수벡터"
         # 세션 상태에 업데이트
         st.session_state['df_for_leontief_with_label'] = current_df
 
