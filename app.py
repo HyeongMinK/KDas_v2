@@ -234,16 +234,6 @@ def main():
 
         # 세션 상태에 업데이트
         st.session_state['df_for_leontief_with_label'] = current_df
-        # DataFrame을 가져옵니다.
-        current_df = st.session_state['df_for_leontief_with_label']
-
-        # 2행 마지막 열에 이름 추가
-        current_df.iloc[2, -1] = '이름_행'
-
-        # 2열 마지막 행에 이름 추가
-        current_df.iloc[-1, 2] = '이름_열'
-        # 세션 상태에 업데이트
-        st.session_state['df_for_leontief_with_label'] = current_df
 
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
