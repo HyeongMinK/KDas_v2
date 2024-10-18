@@ -225,9 +225,6 @@ def main():
         # 새로운 크기로 DataFrame을 초기화합니다.
         new_df = pd.DataFrame(leontief_with_sums)
 
-        # 현재 DataFrame의 크기를 +1씩 늘리기 (NaN으로 초기화)
-        current_df = current_df.reindex(index=range(existing_rows + 1), columns=range(existing_cols + 1))
-
         # 새로운 DataFrame을 기존 DataFrame의 적절한 위치에 업데이트
         current_df.iloc[2:2 + new_df.shape[0], 2:2 + new_df.shape[1]] = new_df
 
