@@ -212,9 +212,6 @@ def main():
         st.session_state['df_for_leontief_with_label'].iloc[2:, 2:] = tmp
         st.session_state['df_for_r_with_label'].iloc[2:, 2:] = tmp2
 
-        st.session_state['df_for_added_value']=st.session_state['df_for_leontief_with_label'].copy()
-        st.session_state['df_for_added_value'].iloc[2:, 2:] = tmp1
-
         st.session_state['df_normalized_with_label'] = st.session_state['df_for_leontief_with_label'].copy()
         unit_matrix = np.eye(tmp.shape[0])
         subtracted_matrix = unit_matrix - tmp
