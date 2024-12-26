@@ -245,6 +245,14 @@ def main():
         leontief_with_sums[-1, :-1] = leontief.sum(axis=0)  # 마지막 행에 각 열의 합
         leontief_with_sums[:-1, -1] = leontief.sum(axis=1)  # 마지막 열에 각 행의 합
 
+        # 마지막 행과 마지막 열 값을 행, 열의 평균으로 나누기
+        row_averages = leontief_with_sums[:-1, :-1].mean(axis=1)
+        col_averages = leontief_with_sums[:-1, :-1].mean(axis=0)
+
+        # 나누기 수행
+        leontief_with_sums[-1, :-1] /= col_averages  # 마지막 행의 값들을 각 열의 평균으로 나누기
+        leontief_with_sums[:-1, -1] /= row_averages  # 마지막 열의 값들을 각 행의 평균으로 나누기
+
         # 최종적으로 N+1*N+1 배열을 새로운 DataFrame에 업데이트
         # 새로운 크기로 DataFrame을 초기화합니다.
         new_df = pd.DataFrame(leontief_with_sums)
