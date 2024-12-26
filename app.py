@@ -287,8 +287,11 @@ def main():
             st.write(st.session_state['added_value_denominator'])
 
 
-        st.write(leontief_with_sums[-1, :-1].mean()) # 마지막 행 평균
-        st.write(leontief_with_sums[:-1, -1].mean()) # 마지막 열 평균
+        is_equal_to_one_row = np.isclose(leontief_with_sums[-1, :-1].mean(), 1)
+        st.write(f"행 합이 평균이 1과 동일 여부 {is_equal_to_one_row}")
+        is_equal_to_one_row = np.isclose(leontief_with_sums[:-1, -1].mean(), 1)
+        st.write(f"열 합이 평균이 1과 동일 여부 {is_equal_to_one_row}")
+
 
         # 1. 행렬을 순회하며 -0.1 ~ 2 범위를 벗어난 값의 위치를 찾음
         for i in range(leontief.shape[0]):
