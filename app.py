@@ -288,9 +288,9 @@ def main():
 
 
         is_equal_to_one_row = np.isclose(leontief_with_sums[-1, :-1].mean(), 1)
-        st.write(f"행 합이 평균이 1과 동일 여부 {is_equal_to_one_row}")
+        st.write(f"행(영향력계수) 합의 평균이 1과 동일 여부 {is_equal_to_one_row}")
         is_equal_to_one_row = np.isclose(leontief_with_sums[:-1, -1].mean(), 1)
-        st.write(f"열 합이 평균이 1과 동일 여부 {is_equal_to_one_row}")
+        st.write(f"열(감응도계수) 합의 평균이 1과 동일 여부 {is_equal_to_one_row}")
 
 
         # 1. 행렬을 순회하며 -0.1 ~ 2 범위를 벗어난 값의 위치를 찾음
