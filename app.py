@@ -246,8 +246,8 @@ def main():
         leontief_with_sums[:-1, -1] = leontief.sum(axis=1)  # 마지막 열에 각 행의 합
 
         # 마지막 행과 마지막 열 값을 행, 열의 평균으로 나누기
-        row_averages = leontief_with_sums[:-1, :-1].mean(axis=1)
-        col_averages = leontief_with_sums[:-1, :-1].mean(axis=0)
+        row_averages = leontief_with_sums[:-1, -1].mean(axis=1)
+        col_averages = leontief_with_sums[-1, :-1].mean(axis=0)
 
         # 나누기 수행
         leontief_with_sums[-1, :-1] /= col_averages  # 마지막 행의 값들을 각 열의 평균으로 나누기
