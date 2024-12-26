@@ -287,8 +287,8 @@ def main():
             st.write(st.session_state['added_value_denominator'])
 
 
-        st.write(st.session_state['df_for_leontief_with_label'][-1, :-1].mean()) # 마지막 행 평균
-        st.write(st.session_state['df_for_leontief_with_label'][:-1, -1].mean()) # 마지막 열 평균
+        st.write(st.session_state['df_for_leontief_with_label'].iloc[-1, :-1].mean()) # 마지막 행 평균
+        st.write(st.session_state['df_for_leontief_with_label'].iloc[:-1, -1].mean()) # 마지막 열 평균
 
         # 1. 행렬을 순회하며 -0.1 ~ 2 범위를 벗어난 값의 위치를 찾음
         for i in range(leontief.shape[0]):
