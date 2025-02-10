@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from functions import *
-
+import matplotlib.pyplot as plt
 
 ### Streamlit 구현
 def main():
@@ -24,6 +24,12 @@ def main():
 
     if 'number_of_divide' not in st.session_state:
         st.session_state['number_of_divide'] = 0
+
+    if "ids_simbol" not in st.session_state:
+        st.session_state.ids_simbol = {}
+
+    if "show_edited" not in st.session_state:
+        st.session_state.show_edited = False
     def find_string_values(df, first_idx):
         # 특정 구간의 데이터 선택
         selected_df = df.iloc[first_idx[0]:, first_idx[1]:]
@@ -119,6 +125,10 @@ def main():
                 result = insert_row_and_col(st.session_state['df_editing'], first_idx, st.session_state['mid_ID_idx'], new_code, name, number_of_label)
                 st.session_state['df_editing'], st.session_state['mid_ID_idx'] = result[0:2]
                 st.session_state['data_editing_log'] += (result[2] + '\n\n')
+                if new_code not in st.session_state.ids_simbol:
+                    st.session_state.ids_simbol[new_code] = []  # 새로운 리스트 생성
+                st.session_state.ids_simbol[new_code].append(name)  # 값 추가
+                st.session_state.show_edited = False
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             origin_code = st.text_input('from')
@@ -131,6 +141,7 @@ def main():
                 result = transfer_to_new_sector(st.session_state['df_editing'], first_idx, origin_code, target_code, alpha)
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
+                st.session_state.show_edited = False
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button('0인 행(열) 삭제'):
@@ -138,6 +149,7 @@ def main():
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
                 st.session_state['mid_ID_idx'] = result[2]
+                st.session_state.show_edited = False
         with col2:
              if st.button('-값 절반으로 줄이기'):
                 mid_ID_idx_reduced = (st.session_state['mid_ID_idx'][0] - 1, st.session_state['mid_ID_idx'][1] - 1)
@@ -145,12 +157,14 @@ def main():
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
                 st.session_state['number_of_divide'] +=1
+                st.session_state.show_edited = False
         with col3:
             if st.button('적용'):
                 st.session_state['df_edited'] = st.session_state['df_editing'].copy()
+                st.session_state.show_edited = True
         st.markdown(f"##### - 값 나누는 것: **{st.session_state['number_of_divide']}** 번 적용")
         st.write(st.session_state['df_editing'])
-    if 'df_edited' in st.session_state:
+    if 'df_edited' in st.session_state and st.session_state.show_edited:
         st.header('수정 된 Excel파일 입니다.')
         edited_matrix_X = get_submatrix_withlabel(st.session_state['df_edited'], first_idx[0],first_idx[1], st.session_state['mid_ID_idx'][0], st.session_state['mid_ID_idx'][1], first_idx, numberoflabel = 2)
         edited_matrix_R = get_submatrix_withlabel(st.session_state['df_edited'], st.session_state['mid_ID_idx'][0]+1,first_idx[1], st.session_state['df_edited'].shape[0]-1, st.session_state['mid_ID_idx'][1], first_idx, numberoflabel = 2)
@@ -177,7 +191,7 @@ def main():
         st.header("DataFrame을 임계값을 기준으로 filtering 합니다.")
         st.subheader('threshold에 따른 생존비율 그래프')
 
-    if 'df_edited' in st.session_state:
+    if 'df_edited' in st.session_state and st.session_state.show_edited:
         st.session_state['df_for_leontief'] = edited_matrix_X.iloc[:-1, :-1].copy()
         st.session_state['df_for_leontief'].index = range(st.session_state['df_for_leontief'].shape[0])
         st.session_state['df_for_leontief'].columns = range(st.session_state['df_for_leontief'].shape[1])
@@ -198,7 +212,7 @@ def main():
         st.session_state['added_value_denominator_replaced'] = st.session_state['added_value_denominator'].replace(0, np.finfo(float).eps)
 
         
-    if 'df_for_leontief' in st.session_state:
+    if 'df_for_leontief' in st.session_state and st.session_state.show_edited:
         st.session_state['df_for_leontief_without_label'] = st.session_state['df_for_leontief'].iloc[2:, 2:].copy()
         st.session_state['df_for_leontief_with_label'] = st.session_state['df_for_leontief'].copy()
 
@@ -263,15 +277,35 @@ def main():
 
         # 새로운 DataFrame을 기존 DataFrame의 적절한 위치에 업데이트
         current_df.iloc[2:2 + new_df.shape[0], 2:2 + new_df.shape[1]] = new_df
-        current_df.iloc[1,-1]="감응도계수"
-        current_df.iloc[-1,1]="영향력계수벡터"
+        current_df.iloc[1,-1]="FL"
+        current_df.iloc[-1,1]="BL"
         # 세션 상태에 업데이트
         st.session_state['df_for_leontief_with_label'] = current_df
 
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
+        ids_col = st.session_state['df_for_leontief_with_label'].iloc[1:-1, :2]
+        fl_data = st.session_state['df_for_leontief_with_label'].iloc[1:-1, -1]
+        bl_data = st.session_state['df_for_leontief_with_label'].iloc[-1, 1:-1]
+        
+        # DataFrame으로 변환 (bl_data가 Series일 경우 df로 변환 필요)
+        fl_data = fl_data.to_frame(name="2")  # FL 열 이름 지정
+        bl_data = bl_data.to_frame(name="3")  # BL 열 이름 지정
+
+        # 인덱스를 리셋하여 병합이 가능하도록 정리
+        ids_col = ids_col.reset_index(drop=True)
+        fl_data = fl_data.reset_index(drop=True)
+        bl_data = bl_data.reset_index(drop=True)
+
+        # 좌우로 데이터프레임 결합 (concat 사용)
+        st.session_state['fl_bl'] = pd.concat([ids_col, fl_data, bl_data], axis=1)
+
+        st.session_state['df_for_leontief_with_label']=st.session_state['df_for_leontief_with_label'].iloc[:-1, :-1]
+
+
+
         st.subheader('Leontief 과정 matrices')
-        col1, col2, col3, col4,col5,col6= st.tabs(['edited', 'normailization denominator', '투입계수행렬', 'leontief inverse','부가가치계수행렬','부가가치계벡터'])
+        col1, col2, col3, col4,col5,col6, col7= st.tabs(['edited', 'normailization denominator', '투입계수행렬', 'leontief inverse','FL-BL','부가가치계수행렬','부가가치계벡터'])
         with col1:
             st.write(st.session_state['df_for_leontief'])
         with col2:
@@ -282,8 +316,10 @@ def main():
             st.write(st.session_state['df_for_leontief_with_label'])
             invalid_positions = []
         with col5:
-            st.write(st.session_state['df_for_r_with_label'])
+            st.write(st.session_state['fl_bl'])
         with col6:
+            st.write(st.session_state['df_for_r_with_label'])
+        with col7:
             st.write(st.session_state['added_value_denominator'])
 
 
@@ -322,6 +358,39 @@ def main():
                 st.write(f"위치: {pos[:2]}, 값: {pos[2]}")
         else:
             st.write("모든 대각 원소가 1보다 큽니다.")
+        
+        st.subheader("Plot")
+        
+        
+        # 세션 상태에서 ids_simbol의 값들 가져오기 (리스트 형태로 변환)
+        ids_values = [item for sublist in st.session_state.ids_simbol.values() for item in sublist]
+        # 부문명칭 값이 ids_values에 포함된 경우와 그렇지 않은 경우 분리
+        highlight_df = st.session_state['fl_bl'][st.session_state['fl_bl'][1].isin(ids_values)]  # 포함된 경우
+        other_df = st.session_state['fl_bl'][~st.session_state['fl_bl'][1].isin(ids_values)]  # 포함되지 않은 경우
+        other_df =  other_df.iloc[1:,:]
+
+        # 플롯 생성
+        fig, ax = plt.subplots(figsize=(12, 10))
+
+        # 다른 점들
+        ax.scatter(other_df['2'], other_df['3'], facecolors='none', edgecolors='black', s=100)
+
+        # 강조 점들
+        ax.scatter(highlight_df['2'], highlight_df['3'], color='red', s=150)
+
+        # 강조 점 레이블 추가
+        for i, row in highlight_df.iterrows():
+            ax.text(row['2'], row['3'], row[1], color='black', fontsize=16, ha='right')
+
+        # 라벨 및 기준선 추가
+        ax.set_xlabel('FL', fontsize=14)
+        ax.set_ylabel('BL', fontsize=14)
+        ax.axhline(1, color='black', linestyle='--', linewidth=1)
+        ax.axvline(1, color='black', linestyle='--', linewidth=1)
+
+        # Streamlit에서 그래프 표시
+        st.pyplot(fig)
+
         with st.sidebar.expander('normalized, leontief inverse'):
             donwload_data(st.session_state['df_normalized_with_label'], 'normalized')
             donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
