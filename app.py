@@ -358,10 +358,10 @@ def main():
                 st.write(f"위치: {pos[:2]}, 값: {pos[2]}")
         else:
             st.write("모든 대각 원소가 1보다 큽니다.")
+
+
         
         st.subheader("Plot")
-        
-        
         # 세션 상태에서 ids_simbol의 값들 가져오기 (리스트 형태로 변환)
         ids_values = [item for sublist in st.session_state.ids_simbol.values() for item in sublist]
         # 부문명칭 값이 ids_values에 포함된 경우와 그렇지 않은 경우 분리
@@ -391,15 +391,83 @@ def main():
         # Streamlit에서 그래프 표시
         st.pyplot(fig)
 
+
+        win_A = st.session_state['df_normalized_with_label'].iloc[2:, 2:].copy().values
+        win_epsilon = 0.05
+
+        win_N0 = compute_leontief_inverse(win_A, epsilon=win_epsilon)
+
+        win_Diagon, win_N = separate_diagonals(win_N0)
+
+        win_s = np.sum(win_N)
+        win_ss = np.sum(np.square(win_N))
+        win_n = win_A.shape[0]
+        win_num_elements = win_n**2 - win_n
+        win_avg = win_s / win_num_elements
+        win_variance = win_ss / win_num_elements - win_avg**2
+        if win_variance < 0:
+            win_variance = 0
+        win_stdev = np.sqrt(win_variance)
+
+        win_delta = win_avg - win_stdev
+
+
+        st.subheader("근사된 Leontief 역행렬 (N0)")
+        win_N0_label = st.session_state['df_normalized_with_label'].copy()
+        win_N0_label.iloc[2:,2:]= win_N0
+        st.write(win_N0_label)
+        
+        st.subheader("네트워크 기본 행렬 (N, 대각원소 0)")
+        win_N_label = st.session_state['df_normalized_with_label'].copy()
+        win_N_label.iloc[2:,2:]= win_N
+        st.write(win_N_label)
+
+        st.write(f"\noff-diagonal 원소의 평균: {win_avg}")
+        st.write(f"off-diagonal 원소의 표준편차: {win_stdev}")
+        st.write(f"임계치 (delta): {win_delta}")
+
+        win_col1, win_col2= st.columns(2)
+        with win_col1:
+            win_delta_userinput = float(st.text_input('delta를 입력하세요','0.000'))
+        with win_col2:
+            if st.button('Apply delta'):
+                st.session_state.delta = win_delta_userinput
+
+        if 'delta' in st.session_state:
+            N_final = threshold_network(win_N, st.session_state.delta)
+            win_N_final_label = st.session_state['df_normalized_with_label'].copy()
+            win_N_final_label.iloc[2:,2:]= N_final
+
+            BN = create_binary_network(N_final)
+            win_BN_final_label = st.session_state['df_normalized_with_label'].copy()
+            win_BN_final_label.iloc[2:,2:]= BN
+
+            UN = create_undirected_network(BN)
+
+            win_UN_final_label = st.session_state['df_normalized_with_label'].copy()
+            win_UN_final_label.iloc[2:,2:]= UN
+
+            col1_net, col2_net, col3_net = st.tabs([f"임계치 적용 후 네트워크 행렬", '이진화된 방향성 네트워크 (BN)', '무방향 이진 네트워크 (UN)'])
+            with col1_net:
+                st.write(win_N_final_label)
+            with col2_net:
+                st.write(win_BN_final_label)
+            with col3_net:
+                st.write(win_UN_final_label)
+
+
         with st.sidebar.expander('normalized, leontief inverse'):
             donwload_data(st.session_state['df_normalized_with_label'], 'normalized')
             donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
+
         col1, col2= st.columns(2)
         with col1:
             threshold = st.number_input('threshold를 입력하세요', 0.000, 1.000, step=0.001)
         with col2:
             if st.button('Apply threshold'):
                 st.session_state.threshold = threshold
+
+        
 
     if 'threshold' in st.session_state:
         # binary matrix 생성

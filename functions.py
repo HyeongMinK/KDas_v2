@@ -212,3 +212,108 @@ def load_data(file):
 @st.cache_data 
 def convert_df(df):
     return df.to_csv(header=False, index=False).encode('utf-8-sig')
+
+def compute_leontief_inverse(A, epsilon=0.05, max_iter=100):
+    """
+    Leontief 역행렬을 무한급수(I + A + A^2 + ...)로 근사 계산하는 함수.
+    수렴 조건: 누적합의 상대변화가 epsilon 이하가 될 때까지 반복.
+    
+    Parameters:
+        A (ndarray): 투입계수행렬.
+        epsilon (float): 수렴 판정 기준 (예: 0.05 = 5%).
+        max_iter (int): 최대 반복 횟수 (무한급수의 수렴이 안 될 경우 대비).
+    
+    Returns:
+        M (ndarray): I + A + A^2 + ... + A^r (r번째 항까지 계산한 근사 Leontief 역행렬).
+    """
+    n = A.shape[0]
+    I = np.eye(n)           # n x n 항등행렬 생성
+    M = I.copy()            # 초기 누적합: M(0) = I
+    s_prev = np.sum(M)      # 초기 전체합 (s(0))
+    k = 1                   # 거듭제곱 차수 초기화
+
+    while k < max_iter:
+        # A^k 계산 (행렬의 거듭제곱)
+        A_power = np.linalg.matrix_power(A, k)
+        
+        # 누적합 업데이트: M(k) = M(k-1) + A^k
+        M_new = M + A_power
+        
+        # 새로운 전체합 계산
+        s_new = np.sum(M_new)
+        
+        # 상대 변화량 계산: (s(k) - s(k-1)) / s(k-1)
+        ratio_change = (s_new - s_prev) / s_prev if s_prev != 0 else 0
+        
+        # 중간 결과 출력 (디버그용)
+        print(f"Iteration {k}: ratio_change = {ratio_change:.4f}")
+        
+        # 수렴 판정: 상대 변화가 epsilon 이하이면 종료
+        if ratio_change <= epsilon:
+            M = M_new
+            break
+        
+        # 업데이트 후 다음 반복 진행
+        M = M_new
+        s_prev = s_new
+        k += 1
+    
+    return M
+
+def separate_diagonals(N0):
+    """
+    입력 행렬 N0에서 대각원소와 비대각원소(네트워크 base)를 분리.
+    
+    Parameters:
+        N0 (ndarray): Leontief 역행렬 근사 (I + A + A^2 + ...).
+    
+    Returns:
+        Diagon (ndarray): N0에서 대각원소만 남기고 나머지를 0으로 만든 행렬.
+        N (ndarray): N0에서 대각원소를 모두 0으로 만든 네트워크 행렬.
+    """
+    # np.diag: 대각 성분 추출, np.diagflat: 대각 행렬로 재구성
+    Diagon = np.diag(np.diag(N0))
+    N = N0 - Diagon
+    return Diagon, N
+
+def threshold_network(N, delta):
+    """
+    네트워크 행렬 N에서 임계치 delta보다 작은 값들을 0으로 대체.
+    
+    Parameters:
+        N (ndarray): 원본 네트워크 행렬.
+        delta (float): 임계치 값.
+    
+    Returns:
+        N_thresholded (ndarray): thresholding 적용된 네트워크 행렬.
+    """
+    N_thresholded = N.copy()
+    N_thresholded[N_thresholded < delta] = 0
+    return N_thresholded
+
+def create_binary_network(N):
+    """
+    가중치 네트워크 행렬 N를 이진(0-1) 네트워크로 변환 (양수면 1, 아니면 0).
+    
+    Parameters:
+        N (ndarray): 가중치 네트워크 행렬.
+    
+    Returns:
+        BN (ndarray): 이진화된 네트워크 (방향성 유지).
+    """
+    BN = (N > 0).astype(int)
+    return BN
+
+def create_undirected_network(BN):
+    """
+    방향성이 있는 이진 네트워크 BN를 무방향 네트워크로 변환.
+    두 노드 간 어느 한쪽이라도 연결되어 있으면, 무방향 연결로 처리.
+    
+    Parameters:
+        BN (ndarray): 이진화된 방향성 네트워크.
+    
+    Returns:
+        UN (ndarray): 무방향(대칭) 이진 네트워크.
+    """
+    UN = ((BN + BN.T) > 0).astype(int)
+    return UN
