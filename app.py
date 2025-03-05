@@ -3,6 +3,7 @@ import pandas as pd
 import streamlit as st
 from functions import *
 import matplotlib.pyplot as plt
+import networkx as nx
 
 ### Streamlit 구현
 def main():
@@ -442,6 +443,20 @@ def main():
             win_BN_final_label = st.session_state['df_normalized_with_label'].copy()
             win_BN_final_label.iloc[2:,2:]= BN
 
+            G_bn = nx.DiGraph()
+
+            # 1이 있는 위치를 찾아서 엣지를 추가
+            rows_bn, cols_bn = np.where(BN == 1)
+            edges_bn = zip(rows_bn, cols_bn)  # (i, j) 형태로 변환
+
+            G_bn.add_edges_from(edges_bn)
+
+            in_degree_bn = dict(G_bn.in_degree())
+            out_degree_bn = dict(G_bn.out_degree())
+
+            st.write('In-degree Centrality', in_degree_bn)
+            st.write('Out-degree Centrality', out_degree_bn)
+
             UN = create_undirected_network(BN)
 
             win_UN_final_label = st.session_state['df_normalized_with_label'].copy()
@@ -452,6 +467,14 @@ def main():
                 st.write(win_N_final_label)
             with col2_net:
                 st.write(win_BN_final_label)
+                col1_bn, col2_bn, col3_bn = st.tabs([f"In-degree Centrality", 'Out-degree Centrality', 'Betweenness Centrality'])
+                with col1_bn:
+                    st.write(win_N_final_label)
+                with col2_bn:
+                    st.write(win_N_final_label)
+                with col3_bn:
+                    st.write(win_N_final_label)
+
             with col3_net:
                 st.write(win_UN_final_label)
 
