@@ -446,7 +446,7 @@ def main():
             G_bn = nx.DiGraph()
 
             # 1이 있는 위치를 찾아서 엣지를 추가
-            rows_bn, cols_bn = np.where(BN == 1)
+            cols_bn, rows_bn = np.where(BN == 1)
             edges_bn = zip(rows_bn, cols_bn)  # (i, j) 형태로 변환
 
             G_bn.add_edges_from(edges_bn)
@@ -454,8 +454,16 @@ def main():
             in_degree_bn = dict(G_bn.in_degree())
             out_degree_bn = dict(G_bn.out_degree())
 
-            st.write('In-degree Centrality', in_degree_bn)
-            st.write('Out-degree Centrality', out_degree_bn)
+            win_gd_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:-1, :2]
+            # in-degree와 out-degree 딕셔너리를 DataFrame으로 변환
+            win_gd_final_label["in_degree"] = pd.Series(in_degree_bn).sort_index().values.reshape(-1, 1)
+            win_gd_final_label["out_degree"] = pd.Series(out_degree_bn).sort_index().values.reshape(-1, 1)
+
+
+
+            st.write(win_gd_final_label)
+
+
 
             UN = create_undirected_network(BN)
 
@@ -467,13 +475,11 @@ def main():
                 st.write(win_N_final_label)
             with col2_net:
                 st.write(win_BN_final_label)
-                col1_bn, col2_bn, col3_bn = st.tabs([f"In-degree Centrality", 'Out-degree Centrality', 'Betweenness Centrality'])
+                col1_bn, col2_bn = st.tabs([f"Degree Centrality", 'Betweenness Centrality'])
                 with col1_bn:
-                    st.write(win_N_final_label)
+                    st.write(win_gd_final_label)
                 with col2_bn:
-                    st.write(win_N_final_label)
-                with col3_bn:
-                    st.write(win_N_final_label)
+                    st.write("아직 구현 안됨")
 
             with col3_net:
                 st.write(win_UN_final_label)
