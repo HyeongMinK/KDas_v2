@@ -445,25 +445,81 @@ def main():
 
             G_bn = nx.DiGraph()
 
+            # 모든 노드 가져오기 (고립된 노드 포함)
+            all_nodes = set(range(BN.shape[0]))  # BN의 크기 기준으로 전체 노드 설정
+            G_bn.add_nodes_from(all_nodes)  # 모든 노드 추가 (고립 노드 포함)
+
             # 1이 있는 위치를 찾아서 엣지를 추가
             cols_bn, rows_bn = np.where(BN == 1)
             edges_bn = zip(rows_bn, cols_bn)  # (i, j) 형태로 변환
 
             G_bn.add_edges_from(edges_bn)
 
+
+
+
             in_degree_bn = dict(G_bn.in_degree())
             out_degree_bn = dict(G_bn.out_degree())
 
-            win_gd_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:-1, :2]
+            bc_bn= nx.betweenness_centrality(G_bn,normalized=False,endpoints=False)
+            num_n = len(G_bn)
+            bc_bn= {node: value / (num_n * (num_n - 1)) for node, value in bc_bn.items()}
+
+            cci_bn = nx.closeness_centrality(G_bn)
+            cco_bn = nx.closeness_centrality(G_bn.reverse())
+
+            evi_bn = nx.eigenvector_centrality(G_bn)
+            evo_bn = nx.eigenvector_centrality(G_bn.reverse())
+
+            hubs, authorities = nx.hits(G_bn, max_iter=1000, tol=1e-08, normalized=True)
+
+            win_gd_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
             # in-degree와 out-degree 딕셔너리를 DataFrame으로 변환
             win_gd_final_label["in_degree"] = pd.Series(in_degree_bn).sort_index().values.reshape(-1, 1)
             win_gd_final_label["out_degree"] = pd.Series(out_degree_bn).sort_index().values.reshape(-1, 1)
+            
+            gd_in_degree_mean = win_gd_final_label["in_degree"].mean()
+            gd_in_degree_std = win_gd_final_label["in_degree"].std()
+
+            gd_out_degree_mean = win_gd_final_label["out_degree"].mean()
+            gd_out_degree_std = win_gd_final_label["out_degree"].std()
 
 
+            win_bc_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
+            win_bc_final_label["Betweenness Centrality"] = pd.Series(bc_bn).sort_index().values.reshape(-1, 1)
 
-            st.write(win_gd_final_label)
+            bc_degree_mean = win_bc_final_label["Betweenness Centrality"].mean()
+            bc_degree_std = win_bc_final_label["Betweenness Centrality"].std()
 
+            win_cc_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
+            win_cc_final_label["Indegree_Closeness Centrality"] = pd.Series(cci_bn).sort_index().values.reshape(-1, 1)
+            win_cc_final_label["Outdegree_Closeness Centrality"] = pd.Series(cco_bn).sort_index().values.reshape(-1, 1)
 
+            cc_in_degree_mean = win_cc_final_label["Indegree_Closeness Centrality"].mean()
+            cc_in_degree_std = win_cc_final_label["Indegree_Closeness Centrality"].std()
+
+            cc_out_degree_mean = win_cc_final_label["Outdegree_Closeness Centrality"].mean()
+            cc_out_degree_std = win_cc_final_label["Outdegree_Closeness Centrality"].std()  
+
+            win_ev_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
+            win_ev_final_label["Indegree_Eigenvector Centrality"] = pd.Series(evi_bn).sort_index().values.reshape(-1, 1)
+            win_ev_final_label["Outdegree_Eigenvector Centrality"] = pd.Series(evo_bn).sort_index().values.reshape(-1, 1)
+
+            ev_in_degree_mean = win_ev_final_label["Indegree_Eigenvector Centrality"].mean()
+            ev_in_degree_std = win_ev_final_label["Indegree_Eigenvector Centrality"].std()
+
+            ev_out_degree_mean = win_ev_final_label["Outdegree_Eigenvector Centrality"].mean()
+            ev_out_degree_std = win_ev_final_label["Outdegree_Eigenvector Centrality"].std() 
+
+            win_hi_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
+            win_hi_final_label["HITS Hubs"] = pd.Series(hubs).sort_index().values.reshape(-1, 1)
+            win_hi_final_label["HITS Authorities"] = pd.Series(authorities).sort_index().values.reshape(-1, 1)
+
+            hi_hub_mean = win_hi_final_label["HITS Hubs"].mean()
+            hi_hub_std = win_hi_final_label["HITS Hubs"].std()
+
+            hi_ah_mean = win_hi_final_label["HITS Authorities"].mean()
+            hi_ah_std = win_hi_final_label["HITS Authorities"].std() 
 
             UN = create_undirected_network(BN)
 
@@ -475,12 +531,51 @@ def main():
                 st.write(win_N_final_label)
             with col2_net:
                 st.write(win_BN_final_label)
-                col1_bn, col2_bn = st.tabs([f"Degree Centrality", 'Betweenness Centrality'])
+                col1_bn, col2_bn, col3_bn, col4_bn, col5_bn = st.tabs([f"Degree Centrality", 'Betweenness Centrality',"Closeness Centrality", "Eigenvector Centrality", "Hub & Authority"])
                 with col1_bn:
-                    st.write(win_gd_final_label)
+                    st.dataframe(win_gd_final_label)
+                    st.write("In-Degree: Mean =", gd_in_degree_mean, ", Std =", gd_in_degree_std)
+                    st.write("Out-Degree: Mean =", gd_out_degree_mean, ", Std =", gd_out_degree_std)
+                
                 with col2_bn:
-                    st.write("아직 구현 안됨")
-
+                    st.dataframe(
+                        win_bc_final_label,
+                        column_config={'Betweenness Centrality': st.column_config.NumberColumn('Betweenness Centrality', format='%.12f')}
+                    )
+                    st.write("Betweenness Centrality: Mean =", bc_degree_mean, ", Std =", bc_degree_std)
+                
+                with col3_bn:
+                    st.dataframe(
+                        win_cc_final_label,
+                        column_config={
+                            'Indegree_Closeness Centrality': st.column_config.NumberColumn('Indegree_Closeness Centrality', format='%.12f'),
+                            'Outdegree_Closeness Centrality': st.column_config.NumberColumn('Outdegree_Closeness Centrality', format='%.12f')
+                        }
+                    )
+                    st.write("Indegree Closeness Centrality: Mean =", cc_in_degree_mean, ", Std =", cc_in_degree_std)
+                    st.write("Outdegree Closeness Centrality: Mean =", cc_out_degree_mean, ", Std =", cc_out_degree_std)
+                
+                with col4_bn:
+                    st.dataframe(
+                        win_ev_final_label,
+                        column_config={
+                            'Indegree_Eigenvector Centrality': st.column_config.NumberColumn('Indegree_Eigenvector Centrality', format='%.12f'),
+                            'Outdegree_Eigenvector Centrality': st.column_config.NumberColumn('Outdegree_Eigenvector Centrality', format='%.12f')
+                        }
+                    )
+                    st.write("Indegree Eigenvector Centrality: Mean =", ev_in_degree_mean, ", Std =", ev_in_degree_std)
+                    st.write("Outdegree Eigenvector Centrality: Mean =", ev_out_degree_mean, ", Std =", ev_out_degree_std)
+                
+                with col5_bn:
+                    st.dataframe(
+                        win_hi_final_label,
+                        column_config={
+                            'HITS Hubs': st.column_config.NumberColumn('HITS Hubs', format='%.12f'),
+                            'HITS Authorities': st.column_config.NumberColumn('HITS Authorities', format='%.12f')
+                        }
+                    )
+                    st.write("HITS Hubs: Mean =", hi_hub_mean, ", Std =", hi_hub_std)
+                    st.write("HITS Authorities: Mean =", hi_ah_mean, ", Std =", hi_ah_std)
             with col3_net:
                 st.write(win_UN_final_label)
 
