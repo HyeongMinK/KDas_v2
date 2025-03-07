@@ -413,10 +413,8 @@ def main():
         win_delta = win_avg - win_stdev
 
 
-        st.subheader("근사된 Leontief 역행렬 (N0)")
         win_N0_label = st.session_state['df_normalized_with_label'].copy()
         win_N0_label.iloc[2:,2:]= win_N0
-        st.write(win_N0_label)
         
         st.subheader("네트워크 기본 행렬 (N, 대각원소 0)")
         win_N_label = st.session_state['df_normalized_with_label'].copy()
