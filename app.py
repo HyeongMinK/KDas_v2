@@ -8,7 +8,7 @@ import networkx as nx
 ### Streamlit 구현
 def main():
     st.sidebar.header("다운로드")
-    st.title("DashBoard")
+    st.title("산업연관데이터 DashBoard")
     mode = st.radio('모드 선택', ['Korea(2010~2020)', 'Korea(1990~2005)', 'Manual'])
     if mode == 'Korea(2010~2020)':
         first_idx = (6,2)
