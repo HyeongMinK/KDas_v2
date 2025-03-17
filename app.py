@@ -584,7 +584,7 @@ def main():
 
         col1, col2= st.columns(2)
         with col1:
-            threshold = st.number_input('threshold를 입력하세요', 0.000, 1.000, step=0.001)
+            threshold = float(st.text_input('threshold를 입력하세요','0.000'))
         with col2:
             if st.button('Apply threshold'):
                 st.session_state.threshold = threshold
