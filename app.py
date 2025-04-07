@@ -4,6 +4,7 @@ import streamlit as st
 from functions import *
 import matplotlib.pyplot as plt
 import networkx as nx
+from networkx.exception import PowerIterationFailedConvergence
 
 ### Streamlit 구현
 def main():
@@ -122,7 +123,7 @@ def main():
         with col2:
             name = st.text_input('새로 삽입할 산업의 이름을 입력하세요')
         with col3:
-            if st.button('Insert'):
+            if st.button('산업 추가'):
                 result = insert_row_and_col(st.session_state['df_editing'], first_idx, st.session_state['mid_ID_idx'], new_code, name, number_of_label)
                 st.session_state['df_editing'], st.session_state['mid_ID_idx'] = result[0:2]
                 st.session_state['data_editing_log'] += (result[2] + '\n\n')
@@ -138,7 +139,7 @@ def main():
         with col3:
             alpha = float(st.text_input('alpha value (0.000 to 1.000)', '0.000'))
         with col4:
-            if st.button('Edit Data'):
+            if st.button('값 옮기기'):
                 result = transfer_to_new_sector(st.session_state['df_editing'], first_idx, origin_code, target_code, alpha)
                 st.session_state['df_editing'] = result[0]
                 st.session_state['data_editing_log'] += (result[1] + '\n\n')
@@ -160,13 +161,14 @@ def main():
                 st.session_state['number_of_divide'] +=1
                 st.session_state.show_edited = False
         with col3:
-            if st.button('적용'):
+            if st.button('전체 적용'):
                 st.session_state['df_edited'] = st.session_state['df_editing'].copy()
                 st.session_state.show_edited = True
         st.markdown(f"##### - 값 나누는 것: **{st.session_state['number_of_divide']}** 번 적용")
         st.write(st.session_state['df_editing'])
     if 'df_edited' in st.session_state and st.session_state.show_edited:
-        st.header('수정 된 Excel파일 입니다.')
+        st.header('위에서 수정 된 Excel파일 입니다.')
+        st.markdown("##### 표, Plot 다운 시 직접 눌러 받아야 합니다.")
         edited_matrix_X = get_submatrix_withlabel(st.session_state['df_edited'], first_idx[0],first_idx[1], st.session_state['mid_ID_idx'][0], st.session_state['mid_ID_idx'][1], first_idx, numberoflabel = 2)
         edited_matrix_R = get_submatrix_withlabel(st.session_state['df_edited'], st.session_state['mid_ID_idx'][0]+1,first_idx[1], st.session_state['df_edited'].shape[0]-1, st.session_state['mid_ID_idx'][1], first_idx, numberoflabel = 2)
         edited_matrix_C = get_submatrix_withlabel(st.session_state['df_edited'], first_idx[0], st.session_state['mid_ID_idx'][1]+1, st.session_state['mid_ID_idx'][0], st.session_state['df_edited'].shape[1]-1, first_idx, numberoflabel = 2)
@@ -189,8 +191,6 @@ def main():
 
         with tab4:
             st.write(edited_matrix_C)
-        st.header("DataFrame을 임계값을 기준으로 filtering 합니다.")
-        st.subheader('threshold에 따른 생존비율 그래프')
 
     if 'df_edited' in st.session_state and st.session_state.show_edited:
         st.session_state['df_for_leontief'] = edited_matrix_X.iloc[:-1, :-1].copy()
@@ -283,7 +283,6 @@ def main():
         # 세션 상태에 업데이트
         st.session_state['df_for_leontief_with_label'] = current_df
 
-        threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
 
         ids_col = st.session_state['df_for_leontief_with_label'].iloc[1:-1, :2]
         fl_data = st.session_state['df_for_leontief_with_label'].iloc[1:-1, -1]
@@ -362,7 +361,7 @@ def main():
 
 
         
-        st.subheader("Plot")
+        st.subheader("Plot (직접 다운 받아야 합니다.)")
         # 세션 상태에서 ids_simbol의 값들 가져오기 (리스트 형태로 변환)
         ids_values = [item for sublist in st.session_state.ids_simbol.values() for item in sublist]
         # 부문명칭 값이 ids_values에 포함된 경우와 그렇지 않은 경우 분리
@@ -433,155 +432,162 @@ def main():
                 st.session_state.delta = win_delta_userinput
 
         if 'delta' in st.session_state:
-            N_final = threshold_network(win_N, st.session_state.delta)
-            win_N_final_label = st.session_state['df_normalized_with_label'].copy()
-            win_N_final_label.iloc[2:,2:]= N_final
+            try:
+                N_final = threshold_network(win_N, st.session_state.delta)
+                win_N_final_label = st.session_state['df_normalized_with_label'].copy()
+                win_N_final_label.iloc[2:,2:]= N_final
 
-            BN = create_binary_network(N_final)
-            win_BN_final_label = st.session_state['df_normalized_with_label'].copy()
-            win_BN_final_label.iloc[2:,2:]= BN
+                G_n = nx.DiGraph()
 
-            G_bn = nx.DiGraph()
+                # 모든 노드 가져오기 (고립된 노드 포함)
+                all_nodes_n = set(range(N_final.shape[0]))  # BN의 크기 기준으로 전체 노드 설정
+                G_n.add_nodes_from(all_nodes_n)  # 모든 노드 추가 (고립 노드 포함)
 
-            # 모든 노드 가져오기 (고립된 노드 포함)
-            all_nodes = set(range(BN.shape[0]))  # BN의 크기 기준으로 전체 노드 설정
-            G_bn.add_nodes_from(all_nodes)  # 모든 노드 추가 (고립 노드 포함)
-
-            # 1이 있는 위치를 찾아서 엣지를 추가
-            cols_bn, rows_bn = np.where(BN == 1)
-            edges_bn = zip(rows_bn, cols_bn)  # (i, j) 형태로 변환
-
-            G_bn.add_edges_from(edges_bn)
+                rows_n, cols_n = np.where(N_final != 0)
+                weights_n = N_final[rows_n, cols_n]
+                edges_n = [(j, i, {'weight': w}) for i, j, w in zip(rows_n, cols_n, weights_n)]
+                G_n.add_edges_from(edges_n)
 
 
+                n_df_degree, n_df_bc, n_df_cc, n_df_ev, n_df_hi, n_gd_in_mean, n_gd_in_std, n_gd_out_mean, n_gd_out_std, n_bc_mean, n_bc_std, n_cc_in_mean, n_cc_in_std, n_cc_out_mean, n_cc_out_std, n_ev_in_mean, n_ev_in_std, n_ev_out_mean, n_ev_out_std, n_hub_mean, n_hub_std, n_ah_mean, n_ah_std = calculate_network_centralities(G_n, st.session_state['df_normalized_with_label'],True)
+
+                BN = create_binary_network(N_final)
+                win_BN_final_label = st.session_state['df_normalized_with_label'].copy()
+                win_BN_final_label.iloc[2:,2:]= BN
+
+                G_bn = nx.DiGraph()
+
+                # 모든 노드 가져오기 (고립된 노드 포함)
+                all_nodes = set(range(BN.shape[0]))  # BN의 크기 기준으로 전체 노드 설정
+                G_bn.add_nodes_from(all_nodes)  # 모든 노드 추가 (고립 노드 포함)
+
+                # 1이 있는 위치를 찾아서 엣지를 추가
+                cols_bn, rows_bn = np.where(BN == 1)
+                edges_bn = zip(rows_bn, cols_bn)  # (i, j) 형태로 변환
+
+                G_bn.add_edges_from(edges_bn)
 
 
-            in_degree_bn = dict(G_bn.in_degree())
-            out_degree_bn = dict(G_bn.out_degree())
-
-            bc_bn= nx.betweenness_centrality(G_bn,normalized=False,endpoints=False)
-            num_n = len(G_bn)
-            bc_bn= {node: value / (num_n * (num_n - 1)) for node, value in bc_bn.items()}
-
-            cci_bn = nx.closeness_centrality(G_bn)
-            cco_bn = nx.closeness_centrality(G_bn.reverse())
-
-            evi_bn = nx.eigenvector_centrality(G_bn)
-            evo_bn = nx.eigenvector_centrality(G_bn.reverse())
-
-            hubs, authorities = nx.hits(G_bn, max_iter=1000, tol=1e-08, normalized=True)
-
-            win_gd_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
-            # in-degree와 out-degree 딕셔너리를 DataFrame으로 변환
-            win_gd_final_label["in_degree"] = pd.Series(in_degree_bn).sort_index().values.reshape(-1, 1)
-            win_gd_final_label["out_degree"] = pd.Series(out_degree_bn).sort_index().values.reshape(-1, 1)
-            
-            gd_in_degree_mean = win_gd_final_label["in_degree"].mean()
-            gd_in_degree_std = win_gd_final_label["in_degree"].std()
-
-            gd_out_degree_mean = win_gd_final_label["out_degree"].mean()
-            gd_out_degree_std = win_gd_final_label["out_degree"].std()
+                bn_df_degree, bn_df_bc, bn_df_cc, bn_df_ev, bn_df_hi, bn_gd_in_mean, bn_gd_in_std, bn_gd_out_mean, bn_gd_out_std, bn_bc_mean, bn_bc_std, bn_cc_in_mean, bn_cc_in_std, bn_cc_out_mean, bn_cc_out_std, bn_ev_in_mean, bn_ev_in_std, bn_ev_out_mean, bn_ev_out_std, bn_hub_mean, bn_hub_std, bn_ah_mean, bn_ah_std = calculate_network_centralities(G_bn, st.session_state['df_normalized_with_label'],False)
 
 
-            win_bc_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
-            win_bc_final_label["Betweenness Centrality"] = pd.Series(bc_bn).sort_index().values.reshape(-1, 1)
+                UN = create_undirected_network(BN)
 
-            bc_degree_mean = win_bc_final_label["Betweenness Centrality"].mean()
-            bc_degree_std = win_bc_final_label["Betweenness Centrality"].std()
+                win_UN_final_label = st.session_state['df_normalized_with_label'].copy()
+                win_UN_final_label.iloc[2:,2:]= UN
 
-            win_cc_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
-            win_cc_final_label["Indegree_Closeness Centrality"] = pd.Series(cci_bn).sort_index().values.reshape(-1, 1)
-            win_cc_final_label["Outdegree_Closeness Centrality"] = pd.Series(cco_bn).sort_index().values.reshape(-1, 1)
+                col1_net, col2_net, col3_net = st.tabs([f"임계치 적용 후 네트워크 행렬", '이진화된 방향성 네트워크 (BN)', '무방향 이진 네트워크 (UN)'])
+                with col1_net:
+                    st.write(win_N_final_label)
+                    st.markdown("##### 임계치 적용 후 네트워크 행렬의 지표")
+                    col1_n, col2_n, col3_n, col4_n, col5_n = st.tabs([f"Degree Centrality", 'Betweenness Centrality',"Closeness Centrality", "Eigenvector Centrality", "Hub & Authority"])
+                    with col1_n:
+                        st.dataframe(n_df_degree)
+                        st.write("In-Degree: Mean =", n_gd_in_mean, ", Std =", n_gd_in_std)
+                        st.write("Out-Degree: Mean =", n_gd_out_mean, ", Std =", n_gd_out_std)
+                    
+                    with col2_n:
+                        st.dataframe(
+                            n_df_bc,
+                            column_config={'Betweenness Centrality': st.column_config.NumberColumn('Betweenness Centrality', format='%.12f')}
+                        )
+                        st.write("Betweenness Centrality: Mean =", n_bc_mean, ", Std =", n_bc_std)
+                    
+                    with col3_n:
+                        st.dataframe(
+                            n_df_cc,
+                            column_config={
+                                'Indegree_Closeness Centrality': st.column_config.NumberColumn('Indegree_Closeness Centrality', format='%.12f'),
+                                'Outdegree_Closeness Centrality': st.column_config.NumberColumn('Outdegree_Closeness Centrality', format='%.12f')
+                            }
+                        )
+                        st.write("Indegree Closeness Centrality: Mean =", n_cc_in_mean, ", Std =", n_cc_in_std)
+                        st.write("Outdegree Closeness Centrality: Mean =", n_cc_out_mean, ", Std =", n_cc_out_std)
+                    
+                    with col4_n:
+                        st.dataframe(
+                            n_df_ev,
+                            column_config={
+                                'Indegree_Eigenvector Centrality': st.column_config.NumberColumn('Indegree_Eigenvector Centrality', format='%.12f'),
+                                'Outdegree_Eigenvector Centrality': st.column_config.NumberColumn('Outdegree_Eigenvector Centrality', format='%.12f')
+                            }
+                        )
+                        st.write("Indegree Eigenvector Centrality: Mean =", n_ev_in_mean, ", Std =", n_ev_in_std)
+                        st.write("Outdegree Eigenvector Centrality: Mean =", n_ev_out_mean, ", Std =", n_ev_out_std)
+                    
+                    with col5_n:
+                        st.dataframe(
+                            n_df_hi,
+                            column_config={
+                                'HITS Hubs': st.column_config.NumberColumn('HITS Hubs', format='%.12f'),
+                                'HITS Authorities': st.column_config.NumberColumn('HITS Authorities', format='%.12f')
+                            }
+                        )
+                        st.write("HITS Hubs: Mean =", n_hub_mean, ", Std =", n_hub_std)
+                        st.write("HITS Authorities: Mean =", n_ah_mean, ", Std =", n_ah_std)
 
-            cc_in_degree_mean = win_cc_final_label["Indegree_Closeness Centrality"].mean()
-            cc_in_degree_std = win_cc_final_label["Indegree_Closeness Centrality"].std()
-
-            cc_out_degree_mean = win_cc_final_label["Outdegree_Closeness Centrality"].mean()
-            cc_out_degree_std = win_cc_final_label["Outdegree_Closeness Centrality"].std()  
-
-            win_ev_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
-            win_ev_final_label["Indegree_Eigenvector Centrality"] = pd.Series(evi_bn).sort_index().values.reshape(-1, 1)
-            win_ev_final_label["Outdegree_Eigenvector Centrality"] = pd.Series(evo_bn).sort_index().values.reshape(-1, 1)
-
-            ev_in_degree_mean = win_ev_final_label["Indegree_Eigenvector Centrality"].mean()
-            ev_in_degree_std = win_ev_final_label["Indegree_Eigenvector Centrality"].std()
-
-            ev_out_degree_mean = win_ev_final_label["Outdegree_Eigenvector Centrality"].mean()
-            ev_out_degree_std = win_ev_final_label["Outdegree_Eigenvector Centrality"].std() 
-
-            win_hi_final_label= st.session_state['df_for_leontief_with_label'].iloc[2:, :2]
-            win_hi_final_label["HITS Hubs"] = pd.Series(hubs).sort_index().values.reshape(-1, 1)
-            win_hi_final_label["HITS Authorities"] = pd.Series(authorities).sort_index().values.reshape(-1, 1)
-
-            hi_hub_mean = win_hi_final_label["HITS Hubs"].mean()
-            hi_hub_std = win_hi_final_label["HITS Hubs"].std()
-
-            hi_ah_mean = win_hi_final_label["HITS Authorities"].mean()
-            hi_ah_std = win_hi_final_label["HITS Authorities"].std() 
-
-            UN = create_undirected_network(BN)
-
-            win_UN_final_label = st.session_state['df_normalized_with_label'].copy()
-            win_UN_final_label.iloc[2:,2:]= UN
-
-            col1_net, col2_net, col3_net = st.tabs([f"임계치 적용 후 네트워크 행렬", '이진화된 방향성 네트워크 (BN)', '무방향 이진 네트워크 (UN)'])
-            with col1_net:
-                st.write(win_N_final_label)
-            with col2_net:
-                st.write(win_BN_final_label)
-                col1_bn, col2_bn, col3_bn, col4_bn, col5_bn = st.tabs([f"Degree Centrality", 'Betweenness Centrality',"Closeness Centrality", "Eigenvector Centrality", "Hub & Authority"])
-                with col1_bn:
-                    st.dataframe(win_gd_final_label)
-                    st.write("In-Degree: Mean =", gd_in_degree_mean, ", Std =", gd_in_degree_std)
-                    st.write("Out-Degree: Mean =", gd_out_degree_mean, ", Std =", gd_out_degree_std)
-                
-                with col2_bn:
-                    st.dataframe(
-                        win_bc_final_label,
-                        column_config={'Betweenness Centrality': st.column_config.NumberColumn('Betweenness Centrality', format='%.12f')}
-                    )
-                    st.write("Betweenness Centrality: Mean =", bc_degree_mean, ", Std =", bc_degree_std)
-                
-                with col3_bn:
-                    st.dataframe(
-                        win_cc_final_label,
-                        column_config={
-                            'Indegree_Closeness Centrality': st.column_config.NumberColumn('Indegree_Closeness Centrality', format='%.12f'),
-                            'Outdegree_Closeness Centrality': st.column_config.NumberColumn('Outdegree_Closeness Centrality', format='%.12f')
-                        }
-                    )
-                    st.write("Indegree Closeness Centrality: Mean =", cc_in_degree_mean, ", Std =", cc_in_degree_std)
-                    st.write("Outdegree Closeness Centrality: Mean =", cc_out_degree_mean, ", Std =", cc_out_degree_std)
-                
-                with col4_bn:
-                    st.dataframe(
-                        win_ev_final_label,
-                        column_config={
-                            'Indegree_Eigenvector Centrality': st.column_config.NumberColumn('Indegree_Eigenvector Centrality', format='%.12f'),
-                            'Outdegree_Eigenvector Centrality': st.column_config.NumberColumn('Outdegree_Eigenvector Centrality', format='%.12f')
-                        }
-                    )
-                    st.write("Indegree Eigenvector Centrality: Mean =", ev_in_degree_mean, ", Std =", ev_in_degree_std)
-                    st.write("Outdegree Eigenvector Centrality: Mean =", ev_out_degree_mean, ", Std =", ev_out_degree_std)
-                
-                with col5_bn:
-                    st.dataframe(
-                        win_hi_final_label,
-                        column_config={
-                            'HITS Hubs': st.column_config.NumberColumn('HITS Hubs', format='%.12f'),
-                            'HITS Authorities': st.column_config.NumberColumn('HITS Authorities', format='%.12f')
-                        }
-                    )
-                    st.write("HITS Hubs: Mean =", hi_hub_mean, ", Std =", hi_hub_std)
-                    st.write("HITS Authorities: Mean =", hi_ah_mean, ", Std =", hi_ah_std)
-            with col3_net:
-                st.write(win_UN_final_label)
+                with col2_net:
+                    st.write(win_BN_final_label)
+                    st.markdown("##### 이진 방향성 네트워크 행렬의 지표")
+                    col1_bn, col2_bn, col3_bn, col4_bn, col5_bn = st.tabs([f"Degree Centrality", 'Betweenness Centrality',"Closeness Centrality", "Eigenvector Centrality", "Hub & Authority"])
+                    with col1_bn:
+                        st.dataframe(bn_df_degree)
+                        st.write("In-Degree: Mean =", bn_gd_in_mean, ", Std =", bn_gd_in_std)
+                        st.write("Out-Degree: Mean =", bn_gd_out_mean, ", Std =", bn_gd_out_std)
+                    
+                    with col2_bn:
+                        st.dataframe(
+                            bn_df_bc,
+                            column_config={'Betweenness Centrality': st.column_config.NumberColumn('Betweenness Centrality', format='%.12f')}
+                        )
+                        st.write("Betweenness Centrality: Mean =", bn_bc_mean, ", Std =", bn_bc_std)
+                    
+                    with col3_bn:
+                        st.dataframe(
+                            bn_df_cc,
+                            column_config={
+                                'Indegree_Closeness Centrality': st.column_config.NumberColumn('Indegree_Closeness Centrality', format='%.12f'),
+                                'Outdegree_Closeness Centrality': st.column_config.NumberColumn('Outdegree_Closeness Centrality', format='%.12f')
+                            }
+                        )
+                        st.write("Indegree Closeness Centrality: Mean =", bn_cc_in_mean, ", Std =", bn_cc_in_std)
+                        st.write("Outdegree Closeness Centrality: Mean =", bn_cc_out_mean, ", Std =", bn_cc_out_std)
+                    
+                    with col4_bn:
+                        st.dataframe(
+                            bn_df_ev,
+                            column_config={
+                                'Indegree_Eigenvector Centrality': st.column_config.NumberColumn('Indegree_Eigenvector Centrality', format='%.12f'),
+                                'Outdegree_Eigenvector Centrality': st.column_config.NumberColumn('Outdegree_Eigenvector Centrality', format='%.12f')
+                            }
+                        )
+                        st.write("Indegree Eigenvector Centrality: Mean =", bn_ev_in_mean, ", Std =", bn_ev_in_std)
+                        st.write("Outdegree Eigenvector Centrality: Mean =", bn_ev_out_mean, ", Std =", bn_ev_out_std)
+                    
+                    with col5_bn:
+                        st.dataframe(
+                            bn_df_hi,
+                            column_config={
+                                'HITS Hubs': st.column_config.NumberColumn('HITS Hubs', format='%.12f'),
+                                'HITS Authorities': st.column_config.NumberColumn('HITS Authorities', format='%.12f')
+                            }
+                        )
+                        st.write("HITS Hubs: Mean =", bn_hub_mean, ", Std =", bn_hub_std)
+                        st.write("HITS Authorities: Mean =", bn_ah_mean, ", Std =", bn_ah_std)
+                with col3_net:
+                    st.write(win_UN_final_label)
+            except:
+                st.write("Delta 값이 너무 큽니다. 값을 줄여주세요.")
 
 
         with st.sidebar.expander('normalized, leontief inverse'):
             donwload_data(st.session_state['df_normalized_with_label'], 'normalized')
             donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
 
+
+        st.header("DataFrame을 임계값을 기준으로 filtering 합니다.")
+        st.subheader('threshold에 따른 생존비율 그래프')
+        threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
         col1, col2= st.columns(2)
         with col1:
             threshold = float(st.text_input('threshold를 입력하세요','0.000'))
@@ -589,27 +595,144 @@ def main():
             if st.button('Apply threshold'):
                 st.session_state.threshold = threshold
 
-        
 
     if 'threshold' in st.session_state:
         # binary matrix 생성
         binary_matrix = make_binary_matrix(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce'), st.session_state.threshold)
+        binary_matrix_with_label = st.session_state['df_for_leontief'].copy()
+        binary_matrix_with_label.iloc[2:,2:] = binary_matrix
+
+
         filtered_matrix_X = st.session_state['df_for_leontief'].copy()
         filtered_matrix_X.iloc[2:, 2:] = filtered_matrix_X.iloc[2:, 2:].apply(pd.to_numeric, errors='coerce')*binary_matrix
+
         filtered_normalized = st.session_state['df_normalized_with_label']
         filtered_normalized.iloc[2:, 2:] = st.session_state['df_normalized_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce')*binary_matrix
+
         filtered_leontief = st.session_state['df_for_leontief_with_label']
         filtered_leontief.iloc[2:, 2:] = st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce')*binary_matrix
-        st.subheader('Filtered matrices')
-        col1, col2, col3, col4 = st.tabs(['binary_matrix', 'normailization denominator', 'filtered_normalized', 'filtered_leontief'])
+
+        G_tn = nx.DiGraph()
+
+        # 모든 노드 가져오기 (고립된 노드 포함)
+        all_nodes_tn = set(range(filtered_leontief.iloc[2:, 2:].shape[0]))
+        G_tn.add_nodes_from(all_nodes_tn)  # 모든 노드 추가 (고립 노드 포함)
+
+        rows_tn, cols_tn = np.where(filtered_leontief.iloc[2:, 2:] != 0)
+        weights_tn = filtered_leontief.iloc[2:, 2:].to_numpy()[rows_tn, cols_tn]
+        edges_tn = [(j, i, {'weight': w}) for i, j, w in zip(rows_tn, cols_tn, weights_tn)]
+        G_tn.add_edges_from(edges_tn)
+
+
+        tn_df_degree, tn_df_bc, tn_df_cc, tn_df_ev, tn_df_hi, tn_gd_in_mean, tn_gd_in_std, tn_gd_out_mean, tn_gd_out_std, tn_bc_mean, tn_bc_std, tn_cc_in_mean, tn_cc_in_std, tn_cc_out_mean, tn_cc_out_std, tn_ev_in_mean, tn_ev_in_std, tn_ev_out_mean, tn_ev_out_std, tn_hub_mean, tn_hub_std, tn_ah_mean, tn_ah_std = calculate_network_centralities(G_tn, st.session_state['df_normalized_with_label'],True)
+
+        tbn_df_degree, tbn_df_bc, tbn_df_cc, tbn_df_ev, tbn_df_hi, tbn_gd_in_mean, tbn_gd_in_std, tbn_gd_out_mean, tbn_gd_out_std, tbn_bc_mean, tbn_bc_std, tbn_cc_in_mean, tbn_cc_in_std, tbn_cc_out_mean, tbn_cc_out_std, tbn_ev_in_mean, tbn_ev_in_std, tbn_ev_out_mean, tbn_ev_out_std, tbn_hub_mean, tbn_hub_std, tbn_ah_mean, tbn_ah_std = calculate_network_centralities(G_tn, st.session_state['df_normalized_with_label'],False)
+
+        st.subheader('Threshold 적용 후 Filtered matrices')
+
+        col1, col2, col3, col4 = st.tabs(['Filtered_leontief', 'Binary_matrix','Normailization Denominator','Filtered_Normalized'])
         with col1:
-            st.write(binary_matrix)
-        with col2:
-            st.write(filtered_matrix_X)
-        with col3:
-            st.write(filtered_normalized)
-        with col4:
             st.write(filtered_leontief)
+            st.markdown("##### Threshold 적용 후 네트워크 행렬의 지표")
+            col1_tn, col2_tn, col3_tn, col4_tn, col5_tn = st.tabs([f"Degree Centrality", 'Betweenness Centrality',"Closeness Centrality", "Eigenvector Centrality", "Hub & Authority"])
+            with col1_tn:
+                st.dataframe(tn_df_degree)
+                st.write("In-Degree: Mean =", tn_gd_in_mean, ", Std =", tn_gd_in_std)
+                st.write("Out-Degree: Mean =", tn_gd_out_mean, ", Std =", tn_gd_out_std)
+            
+            with col2_tn:
+                st.dataframe(
+                    tn_df_bc,
+                    column_config={'Betweenness Centrality': st.column_config.NumberColumn('Betweenness Centrality', format='%.12f')}
+                )
+                st.write("Betweenness Centrality: Mean =", tn_bc_mean, ", Std =", tn_bc_std)
+            
+            with col3_tn:
+                st.dataframe(
+                    tn_df_cc,
+                    column_config={
+                        'Indegree_Closeness Centrality': st.column_config.NumberColumn('Indegree_Closeness Centrality', format='%.12f'),
+                        'Outdegree_Closeness Centrality': st.column_config.NumberColumn('Outdegree_Closeness Centrality', format='%.12f')
+                    }
+                )
+                st.write("Indegree Closeness Centrality: Mean =", tn_cc_in_mean, ", Std =", tn_cc_in_std)
+                st.write("Outdegree Closeness Centrality: Mean =", tn_cc_out_mean, ", Std =", tn_cc_out_std)
+            
+            with col4_tn:
+                st.dataframe(
+                    tn_df_ev,
+                    column_config={
+                        'Indegree_Eigenvector Centrality': st.column_config.NumberColumn('Indegree_Eigenvector Centrality', format='%.12f'),
+                        'Outdegree_Eigenvector Centrality': st.column_config.NumberColumn('Outdegree_Eigenvector Centrality', format='%.12f')
+                    }
+                )
+                st.write("Indegree Eigenvector Centrality: Mean =", tn_ev_in_mean, ", Std =", tn_ev_in_std)
+                st.write("Outdegree Eigenvector Centrality: Mean =", tn_ev_out_mean, ", Std =", tn_ev_out_std)
+            
+            with col5_tn:
+                st.dataframe(
+                    tn_df_hi,
+                    column_config={
+                        'HITS Hubs': st.column_config.NumberColumn('HITS Hubs', format='%.12f'),
+                        'HITS Authorities': st.column_config.NumberColumn('HITS Authorities', format='%.12f')
+                    }
+                )
+                st.write("HITS Hubs: Mean =", tn_hub_mean, ", Std =", tn_hub_std)
+                st.write("HITS Authorities: Mean =", tn_ah_mean, ", Std =", tn_ah_std)
+
+        with col2:
+            st.write(binary_matrix_with_label)
+            st.markdown("##### 이진 방향성 네트워크 행렬의 지표")
+            col1_tbn, col2_tbn, col3_tbn, col4_tbn, col5_tbn = st.tabs([f"Degree Centrality", 'Betweenness Centrality',"Closeness Centrality", "Eigenvector Centrality", "Hub & Authority"])
+            with col1_tbn:
+                st.dataframe(tbn_df_degree)
+                st.write("In-Degree: Mean =", tbn_gd_in_mean, ", Std =", tbn_gd_in_std)
+                st.write("Out-Degree: Mean =", tbn_gd_out_mean, ", Std =", tbn_gd_out_std)
+            
+            with col2_tbn:
+                st.dataframe(
+                    tbn_df_bc,
+                    column_config={'Betweenness Centrality': st.column_config.NumberColumn('Betweenness Centrality', format='%.12f')}
+                )
+                st.write("Betweenness Centrality: Mean =", tbn_bc_mean, ", Std =", tbn_bc_std)
+            
+            with col3_tbn:
+                st.dataframe(
+                    tbn_df_cc,
+                    column_config={
+                        'Indegree_Closeness Centrality': st.column_config.NumberColumn('Indegree_Closeness Centrality', format='%.12f'),
+                        'Outdegree_Closeness Centrality': st.column_config.NumberColumn('Outdegree_Closeness Centrality', format='%.12f')
+                    }
+                )
+                st.write("Indegree Closeness Centrality: Mean =", tbn_cc_in_mean, ", Std =", tbn_cc_in_std)
+                st.write("Outdegree Closeness Centrality: Mean =", tbn_cc_out_mean, ", Std =", tbn_cc_out_std)
+            
+            with col4_tbn:
+                st.dataframe(
+                    tbn_df_ev,
+                    column_config={
+                        'Indegree_Eigenvector Centrality': st.column_config.NumberColumn('Indegree_Eigenvector Centrality', format='%.12f'),
+                        'Outdegree_Eigenvector Centrality': st.column_config.NumberColumn('Outdegree_Eigenvector Centrality', format='%.12f')
+                    }
+                )
+                st.write("Indegree Eigenvector Centrality: Mean =", tbn_ev_in_mean, ", Std =", tbn_ev_in_std)
+                st.write("Outdegree Eigenvector Centrality: Mean =", tbn_ev_out_mean, ", Std =", tbn_ev_out_std)
+            
+            with col5_tbn:
+                st.dataframe(
+                    tbn_df_hi,
+                    column_config={
+                        'HITS Hubs': st.column_config.NumberColumn('HITS Hubs', format='%.12f'),
+                        'HITS Authorities': st.column_config.NumberColumn('HITS Authorities', format='%.12f')
+                    }
+                )
+                st.write("HITS Hubs: Mean =", tbn_hub_mean, ", Std =", tbn_hub_std)
+                st.write("HITS Authorities: Mean =", tbn_ah_mean, ", Std =", tbn_ah_std)
+        with col3:
+            st.write(filtered_matrix_X)
+        with col4:
+            st.write(filtered_normalized)
+
 
         with st.sidebar.expander("filtered file"):
             donwload_data(binary_matrix, 'binary_matrix')

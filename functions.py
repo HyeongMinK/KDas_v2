@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-
+import networkx as nx
 
 ### 사용자 정의 함수 선언
 def make_binary_matrix(matrix, threshold):
@@ -14,6 +14,81 @@ def filter_matrix(matrix, threshold):
     # 임계값 이하의 원소들을 0으로 설정
     filtered_matrix = matrix.where(matrix > threshold, 0)
     return filtered_matrix
+
+def calculate_network_centralities(G_bn, df_label, use_weight=False):
+    weight_arg = 'weight' if use_weight else None
+
+    # Degree
+    in_degree_bn = dict(G_bn.in_degree(weight=weight_arg))
+    out_degree_bn = dict(G_bn.out_degree(weight=weight_arg))
+
+    df_degree = df_label.iloc[2:, :2].copy()
+    df_degree["in_degree"] = pd.Series(in_degree_bn).sort_index().values.reshape(-1, 1)
+    df_degree["out_degree"] = pd.Series(out_degree_bn).sort_index().values.reshape(-1, 1)
+
+    gd_in_mean = df_degree["in_degree"].mean()
+    gd_in_std = df_degree["in_degree"].std()
+    gd_out_mean = df_degree["out_degree"].mean()
+    gd_out_std = df_degree["out_degree"].std()
+
+    # Betweenness
+    bc_bn = nx.betweenness_centrality(G_bn, normalized=False, endpoints=False, weight=weight_arg)
+    num_n = len(G_bn)
+    bc_bn = {node: value / (num_n * (num_n - 1)) for node, value in bc_bn.items()}
+
+    df_bc = df_label.iloc[2:, :2].copy()
+    df_bc["Betweenness Centrality"] = pd.Series(bc_bn).sort_index().values.reshape(-1, 1)
+
+    bc_mean = df_bc["Betweenness Centrality"].mean()
+    bc_std = df_bc["Betweenness Centrality"].std()
+
+    # Closeness
+    cci_bn = nx.closeness_centrality(G_bn, distance=weight_arg)
+    cco_bn = nx.closeness_centrality(G_bn.reverse(), distance=weight_arg)
+
+    df_cc = df_label.iloc[2:, :2].copy()
+    df_cc["Indegree_Closeness Centrality"] = pd.Series(cci_bn).sort_index().values.reshape(-1, 1)
+    df_cc["Outdegree_Closeness Centrality"] = pd.Series(cco_bn).sort_index().values.reshape(-1, 1)
+
+    cc_in_mean = df_cc["Indegree_Closeness Centrality"].mean()
+    cc_in_std = df_cc["Indegree_Closeness Centrality"].std()
+    cc_out_mean = df_cc["Outdegree_Closeness Centrality"].mean()
+    cc_out_std = df_cc["Outdegree_Closeness Centrality"].std()
+
+    # Eigenvector
+    evi_bn = nx.eigenvector_centrality(G_bn, max_iter=500, tol=1e-06, weight=weight_arg)
+    evo_bn = nx.eigenvector_centrality(G_bn.reverse(), max_iter=500, tol=1e-06, weight=weight_arg)
+
+    df_ev = df_label.iloc[2:, :2].copy()
+    df_ev["Indegree_Eigenvector Centrality"] = pd.Series(evi_bn).sort_index().values.reshape(-1, 1)
+    df_ev["Outdegree_Eigenvector Centrality"] = pd.Series(evo_bn).sort_index().values.reshape(-1, 1)
+
+    ev_in_mean = df_ev["Indegree_Eigenvector Centrality"].mean()
+    ev_in_std = df_ev["Indegree_Eigenvector Centrality"].std()
+    ev_out_mean = df_ev["Outdegree_Eigenvector Centrality"].mean()
+    ev_out_std = df_ev["Outdegree_Eigenvector Centrality"].std()
+
+    # HITS (가중치 지원 안 함 → 그대로 사용)
+    hubs, authorities = nx.hits(G_bn, max_iter=1000, tol=1e-08, normalized=True)
+
+    df_hi = df_label.iloc[2:, :2].copy()
+    df_hi["HITS Hubs"] = pd.Series(hubs).sort_index().values.reshape(-1, 1)
+    df_hi["HITS Authorities"] = pd.Series(authorities).sort_index().values.reshape(-1, 1)
+
+    hi_hub_mean = df_hi["HITS Hubs"].mean()
+    hi_hub_std = df_hi["HITS Hubs"].std()
+    hi_ah_mean = df_hi["HITS Authorities"].mean()
+    hi_ah_std = df_hi["HITS Authorities"].std()
+
+    return (
+        df_degree, df_bc, df_cc, df_ev, df_hi,
+        gd_in_mean, gd_in_std, gd_out_mean, gd_out_std,
+        bc_mean, bc_std,
+        cc_in_mean, cc_in_std, cc_out_mean, cc_out_std,
+        ev_in_mean, ev_in_std, ev_out_mean, ev_out_std,
+        hi_hub_mean, hi_hub_std, hi_ah_mean, hi_ah_std
+    )
+
 
 # 임계 값을 0-1까지로, 25%로 x축을 한정해서 시각화, 최대 변화율 지점의 x축 값 찾기
 @st.cache_data 
