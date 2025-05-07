@@ -741,13 +741,6 @@ def main():
             ax_tn.axis('off')
             st.pyplot(fig_tn)
 
-
-
-
-
-
-            # Streamlit에 출력
-            st.pyplot(fig_tn)
             st.markdown("##### 이진 방향성 네트워크 행렬의 지표")
             col1_tbn, col2_tbn, col3_tbn, col4_tbn, col5_tbn = st.tabs([f"Degree Centrality", 'Betweenness Centrality',"Closeness Centrality", "Eigenvector Centrality", "Hub & Authority"])
             with col1_tbn:
