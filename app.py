@@ -541,26 +541,27 @@ def main():
                 with col2_net:
                     st.write(win_BN_final_label)
                     # 1. 노드 이름(A, B, C01, ...) 리스트로 추출
-                    # win_BN_final_label 의 2번째 열(인덱스 0)에 실제 노드명이 들어있다고 가정
-                    node_names_delta = win_BN_final_label.iloc[2:, 0].tolist()  
+                    #    binary_matrix_with_label 의 2번째 행부터 첫 번째 열(0번) 값을 가져옵니다.
+                    node_names_tn = binary_matrix_with_label.iloc[2:, 0].tolist()
 
-                    # 3. 레이아웃 계산
-                    pos = nx.spring_layout(G_bn, seed=42)
+                    # 2. 레이아웃 계산
+                    pos_tn = nx.spring_layout(G_tn, seed=42)
 
-                    # 4. 시각화
-                    fig, ax = plt.subplots(figsize=(8, 6))
-                    nx.draw_networkx_nodes(G_bn, pos, node_size=400, ax=ax)
-                    nx.draw_networkx_edges(G_bn, pos, arrowstyle='->', arrowsize=10, ax=ax)
+                    # 3. 시각화
+                    fig_tn, ax_tn = plt.subplots(figsize=(8, 6))
+                    nx.draw_networkx_nodes(G_tn, pos_tn, node_size=400, ax=ax_tn)
+                    nx.draw_networkx_edges(G_tn, pos_tn, arrowstyle='->', arrowsize=10, ax=ax_tn)
 
-                    # 5. 레이블 매핑 (노드 번호 → 실제 이름)
-                    label_dict = {i: name for i, name in enumerate(node_names_delta)}
+                    # 4. 레이블 매핑 (노드 번호 → 실제 이름)
+                    label_dict_tn = {i: name for i, name in enumerate(node_names_tn)}
 
-                    # 6. 레이블 그리기
-                    nx.draw_networkx_labels(G_bn, pos, labels=label_dict, font_size=10, ax=ax)
+                    # 5. 레이블 그리기
+                    nx.draw_networkx_labels(G_tn, pos_tn, labels=label_dict_tn, font_size=10, ax=ax_tn)
 
-                    ax.set_title("Binary Directed Network (BN)", fontsize=14)
-                    ax.axis('off')
-                    st.pyplot(fig)
+                    ax_tn.set_title("Thresholded Leontief Network (TN)", fontsize=14)
+                    ax_tn.axis('off')
+                    st.pyplot(fig_tn)
+
 
 
 
