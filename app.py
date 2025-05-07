@@ -559,8 +559,7 @@ def main():
                     nx.draw_networkx_edges(G_bn, pos, arrowstyle='->', arrowsize=10, ax=ax)
 
                     # 5. 라벨 그리기
-                    label_dict = {i: name for i, name in enumerate(node_names)}
-                    nx.draw_networkx_labels(G_bn, pos, labels=label_dict, font_size=10, ax=ax)
+                    nx.draw_networkx_labels(G_bn, pos, ax=ax)
 
                     ax.set_title("Binary Directed Network (BN)", fontsize=14)
                     ax.axis('off')
