@@ -437,13 +437,13 @@ def main():
                 N_final = threshold_network(win_N, st.session_state.delta)
                 win_N_final_label = st.session_state['df_normalized_with_label'].copy()
                 win_N_final_label.iloc[2:,2:]= N_final
-                
+
                 N = N_final.shape[0]  # 행렬의 크기 (정방행렬 기준)
                 total_possible_links = N**2 - N  # 대각선 제외한 전체 가능한 링크 수
                 survived_links = np.count_nonzero(N_final)  # 0이 아닌 값 개수 (살아남은 링크 수)
                 link_ratio = survived_links / total_possible_links  # 비율
 
-                st.write(f"적용된 delta: {win_delta_userinput}")
+                st.write(f"적용된 delta: {win_delta_userinput} / N:{N}")
                 st.write(f"남아 있는 링크 수: {survived_links} / 전체 가능 링크 수: {total_possible_links}")
                 st.write(f"남아 있는 링크 비율: {link_ratio:.4f} ({link_ratio * 100:.2f}%)")
 
