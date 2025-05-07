@@ -725,20 +725,9 @@ def main():
         with col2:
             st.write(binary_matrix_with_label)
             # 1. 노드 이름(A, B, C01, ...) 리스트로 추출
-            #    filtered_leontief 에서 2번째 행부터 첫 번째 열(0번) 값을 가져옵니다.
+            #   filtered_leontief 에서 2번째 행부터 첫 번째 열(0번) 값을 가져옵니다.
             node_names_tn = filtered_leontief.iloc[2:, 0].tolist()
-
-            # 2. DiGraph 생성 및 엣지 추가 (기존 G_tn 생성 코드)
-            G_tn = nx.DiGraph()
-            G_tn.add_nodes_from(range(len(node_names_tn)))
-
-            # 필터된 Leontief 행렬에서 0이 아닌 엣지 위치·가중치 추출
-            rows_tn, cols_tn = np.where(filtered_leontief.iloc[2:, 2:].to_numpy() != 0)
-            weights_tn  = filtered_leontief.iloc[2:, 2:].to_numpy()[rows_tn, cols_tn]
-            edges_tn    = [(j, i, {'weight': w}) for i, j, w in zip(rows_tn, cols_tn, weights_tn)]
-            G_tn.add_edges_from(edges_tn)
-
-            # 3. 위치 계산 (layout)
+            # 2. 위치 계산 (layout)
             pos_tn = nx.spring_layout(G_tn, seed=42)
 
             # 4. 시각화
