@@ -94,15 +94,15 @@ def calculate_network_centralities(G_bn, df_label, use_weight=False):
 @st.cache_data
 def threshold_count(matrix):
     import numpy as np
-    import pandas as pd
     import matplotlib.pyplot as plt
     import streamlit as st
 
     L = matrix
+    element_counts = []
     element_ratios = []
 
     N = L.shape[0]
-    total_elements = N**2 - N  # 전체 비대각선 원소 수
+    total_elements = N**2 - N  # 대각선 제외한 전체 원소 수
 
     # 임계값 생성
     threshold_values = np.linspace(0, 1, 1000)[:250]
@@ -110,13 +110,15 @@ def threshold_count(matrix):
     for threshold in threshold_values:
         thresholded_matrix = filter_matrix(L, threshold)
         thresholded_matrix = thresholded_matrix.copy().to_numpy()
+        np.fill_diagonal(thresholded_matrix, 0)
 
-        np.fill_diagonal(thresholded_matrix, 0)  # 대각선 제거
         count = (thresholded_matrix >= threshold).sum().sum()
         ratio = count / total_elements
+
+        element_counts.append(count)
         element_ratios.append(ratio)
 
-    # 최대 변화율(절대값) 찾기
+    # 최대 변화율(절대값) 찾기 (ratio 기준)
     max_change = 0
     max_change_index = 0
     for i in range(1, len(element_ratios)):
@@ -127,18 +129,27 @@ def threshold_count(matrix):
 
     max_change_threshold = threshold_values[max_change_index]
 
-    # 그래프 그리기
-    fig, ax = plt.subplots()
-    ax.plot(threshold_values, element_ratios)
-    ax.set_xlabel('Threshold Value')
-    ax.set_ylabel('Number of Elements ≥ Threshold (Ratio)')
-    ax.set_title('Ratio of Elements Greater than or Equal to Threshold')
-    ax.grid(True)
+    # 그래프 그리기 (이중 y축)
+    fig, ax1 = plt.subplots()
 
+    color1 = 'tab:blue'
+    ax1.set_xlabel('Threshold Value')
+    ax1.set_ylabel('Count (Number of Elements ≥ Threshold)', color=color1)
+    ax1.plot(threshold_values, element_counts, color=color1, label='Count')
+    ax1.tick_params(axis='y', labelcolor=color1)
+
+    ax2 = ax1.twinx()  # 두 번째 y축 생성
+    color2 = 'tab:red'
+    ax2.set_ylabel('Ratio (Count / (N² - N))', color=color2)
+    ax2.plot(threshold_values, element_ratios, color=color2, linestyle='--', label='Ratio')
+    ax2.tick_params(axis='y', labelcolor=color2)
+
+    fig.tight_layout()
     st.pyplot(fig)
     st.write(f'생존율 급감 구간의 임계 값 : {max_change_threshold:.4f}')
 
     return plt.show()
+
 
 
 @st.cache_data()
