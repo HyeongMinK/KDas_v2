@@ -558,7 +558,7 @@ def main():
                     # 5. 레이블 그리기
                     nx.draw_networkx_labels(G_tn, pos_tn, labels=label_dict_tn, font_size=10, ax=ax_tn)
 
-                    ax_tn.set_title("Thresholded Leontief Network (TN)", fontsize=14)
+                    ax_tn.set_title("Thresholded Binary Network (TBN)", fontsize=14)
                     ax_tn.axis('off')
                     st.pyplot(fig_tn)
 
