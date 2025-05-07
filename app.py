@@ -540,10 +540,11 @@ def main():
 
                 with col2_net:
                     st.write(win_BN_final_label)
-                    # 1. 노드 라벨 추출 (DataFrame의 2열을 노드 이름으로 사용)
-                    node_names = win_BN_final_label.iloc[2:, 1].tolist()  # .iloc[2:,1] 위치는 실제 라벨 컬럼에 맞게 조정하세요.
+                    # 1. 노드 이름(A, B, C01, ...) 리스트로 추출
+                    #    win_BN_final_label 의 2번째 열(인덱스 1)에 실제 노드명이 들어있다고 가정
+                    node_names = win_BN_final_label.iloc[2:, 1].tolist()  
 
-                    # 2. DiGraph 생성 및 엣지 추가
+                    # 2. DiGraph 생성 및 엣지 추가 (기존 코드 그대로)
                     G_bn = nx.DiGraph()
                     G_bn.add_nodes_from(range(len(node_names)))
                     cols, rows = np.where(BN == 1)
@@ -558,12 +559,18 @@ def main():
                     nx.draw_networkx_nodes(G_bn, pos, node_size=400, ax=ax)
                     nx.draw_networkx_edges(G_bn, pos, arrowstyle='->', arrowsize=10, ax=ax)
 
-                    # 5. 라벨 그리기
-                    nx.draw_networkx_labels(G_bn, pos, ax=ax)
+                    # 5. 레이블 매핑 (노드 번호 → 실제 이름)
+                    label_dict = {i: name for i, name in enumerate(node_names)}
+
+                    # 6. 레이블 그리기
+                    nx.draw_networkx_labels(G_bn, pos, labels=label_dict, font_size=10, ax=ax)
 
                     ax.set_title("Binary Directed Network (BN)", fontsize=14)
                     ax.axis('off')
                     st.pyplot(fig)
+
+
+
                     st.markdown("##### 이진 방향성 네트워크 행렬의 지표")
                     col1_bn, col2_bn, col3_bn, col4_bn, col5_bn = st.tabs([f"Degree Centrality", 'Betweenness Centrality',"Closeness Centrality", "Eigenvector Centrality", "Hub & Authority"])
                     with col1_bn:
