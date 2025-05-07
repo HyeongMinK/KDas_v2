@@ -443,6 +443,7 @@ def main():
                 total_possible_links = N_final.shape[0] ** 2 - N_final.shape[0]
                 link_ratio = survived_links / total_possible_links
 
+                st.write(f"적용된 delta: {win_delta_userinput}")
                 st.write(f"남아 있는 링크 수: {survived_links} / 전체 가능 링크 수: {total_possible_links}")
                 st.write(f"남아 있는 링크 비율: {link_ratio:.4f} ({link_ratio * 100:.2f}%)")
 
