@@ -430,7 +430,15 @@ def main():
         with win_col2:
             if st.button('Apply delta'):
                 st.session_state.delta = win_delta_userinput
-                # delta 기준 threshold 후 살아남은 링크 비율 출력
+
+
+        if 'delta' in st.session_state:
+            try:
+                N_final = threshold_network(win_N, st.session_state.delta)
+                win_N_final_label = st.session_state['df_normalized_with_label'].copy()
+                win_N_final_label.iloc[2:,2:]= N_final
+
+                        # delta 기준 threshold 후 살아남은 링크 비율 출력
                 survived_links = np.count_nonzero(N_final)
                 total_possible_links = N_final.shape[0] ** 2 - N_final.shape[0]
                 link_ratio = survived_links / total_possible_links
@@ -439,11 +447,6 @@ def main():
                 st.write(f"남아 있는 링크 비율: {link_ratio:.4f} ({link_ratio * 100:.2f}%)")
 
 
-        if 'delta' in st.session_state:
-            try:
-                N_final = threshold_network(win_N, st.session_state.delta)
-                win_N_final_label = st.session_state['df_normalized_with_label'].copy()
-                win_N_final_label.iloc[2:,2:]= N_final
 
                 G_n = nx.DiGraph()
 
