@@ -127,9 +127,6 @@ def threshold_count(matrix):
     ax.set_ylabel('Number of Elements >= Threshold')
     ax.set_title('Number of Elements Greater than or Equal to Threshold in a Matrix')
 
-    # 최대 변화율 지점 표시
-    ax.plot(max_change_threshold, element_counts[max_change_index], 'ro') # ax를 사용하여 데이터 표시
-
     ax.grid(True)
     st.pyplot(fig) # 수정된 부분
     st.write(f'생존율 급감 구간의 임계 값 : {max_change_threshold}')
@@ -275,7 +272,7 @@ def remove_zero_series(df, first_idx, mid_ID_idx):
 
 def donwload_data(df, file_name):
     csv = convert_df(df)
-    button = st.download_button(label=f"{file_name} 다운로드", data=csv, file_name=file_name, mime='text/csv')
+    button = st.download_button(label=f"{file_name} 다운로드", data=csv, file_name=file_name+".csv", mime='text/csv')
     return button
 
 
