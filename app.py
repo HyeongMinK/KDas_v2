@@ -542,8 +542,7 @@ def main():
                     st.write(win_BN_final_label)
                     # 1. 노드 이름(A, B, C01, ...) 리스트로 추출
                     # win_BN_final_label 의 2번째 열(인덱스 1)에 실제 노드명이 들어있다고 가정
-                    node_names = win_BN_final_label.iloc[2:, 1].tolist()  
-                    st.write(node_names)
+                    node_names = win_BN_final_label.iloc[2:, 0].tolist()  
                     # 2. DiGraph 생성 및 엣지 추가 (기존 코드 그대로)
                     G_bn = nx.DiGraph()
                     G_bn.add_nodes_from(range(len(node_names)))
