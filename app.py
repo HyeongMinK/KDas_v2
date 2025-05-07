@@ -541,7 +541,7 @@ def main():
                 with col2_net:
                     st.write(win_BN_final_label)
                     # 1. 노드 이름(A, B, C01, ...) 리스트로 추출
-                    # win_BN_final_label 의 2번째 열(인덱스 1)에 실제 노드명이 들어있다고 가정
+                    # win_BN_final_label 의 2번째 열(인덱스 0)에 실제 노드명이 들어있다고 가정
                     node_names = win_BN_final_label.iloc[2:, 0].tolist()  
                     # 2. DiGraph 생성 및 엣지 추가 (기존 코드 그대로)
                     G_bn = nx.DiGraph()
@@ -724,6 +724,46 @@ def main():
 
         with col2:
             st.write(binary_matrix_with_label)
+            # 1. 노드 이름(A, B, C01, ...) 리스트로 추출
+            #    filtered_leontief 에서 2번째 행부터 첫 번째 열(0번) 값을 가져옵니다.
+            node_names_tn = filtered_leontief.iloc[2:, 0].tolist()
+
+            # 2. DiGraph 생성 및 엣지 추가 (기존 G_tn 생성 코드)
+            G_tn = nx.DiGraph()
+            G_tn.add_nodes_from(range(len(node_names_tn)))
+
+            # 필터된 Leontief 행렬에서 0이 아닌 엣지 위치·가중치 추출
+            rows_tn, cols_tn = np.where(filtered_leontief.iloc[2:, 2:].to_numpy() != 0)
+            weights_tn  = filtered_leontief.iloc[2:, 2:].to_numpy()[rows_tn, cols_tn]
+            edges_tn    = [(j, i, {'weight': w}) for i, j, w in zip(rows_tn, cols_tn, weights_tn)]
+            G_tn.add_edges_from(edges_tn)
+
+            # 3. 위치 계산 (layout)
+            pos_tn = nx.spring_layout(G_tn, seed=42)
+
+            # 4. 시각화
+            fig_tn, ax_tn = plt.subplots(figsize=(8, 6))
+            # 노드
+            nx.draw_networkx_nodes(G_tn, pos_tn, node_size=400, node_color='lightblue', ax=ax_tn)
+            # 엣지 (optional: weight에 비례해서 굵기 조절)
+            widths = [d['weight'] for (_, _, d) in G_tn.edges(data=True)]
+            nx.draw_networkx_edges(
+                G_tn, pos_tn,
+                arrowstyle='->', arrowsize=10,
+                width=[w * 2 for w in widths],  # weight를 2배로 늘려 시각화
+                edge_color='gray',
+                ax=ax_tn
+            )
+
+            # 5. 라벨 매핑 (번호 → 실제 이름)
+            label_dict_tn = {i: name for i, name in enumerate(node_names_tn)}
+            nx.draw_networkx_labels(G_tn, pos_tn, labels=label_dict_tn, font_size=10, ax=ax_tn)
+
+            ax_tn.set_title("Thresholded Leontief Network (TN)", fontsize=14)
+            ax_tn.axis('off')
+
+            # Streamlit에 출력
+            st.pyplot(fig_tn)
             st.markdown("##### 이진 방향성 네트워크 행렬의 지표")
             col1_tbn, col2_tbn, col3_tbn, col4_tbn, col5_tbn = st.tabs([f"Degree Centrality", 'Betweenness Centrality',"Closeness Centrality", "Eigenvector Centrality", "Hub & Authority"])
             with col1_tbn:
