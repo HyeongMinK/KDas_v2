@@ -661,7 +661,15 @@ def main():
 
 
                 with st.sidebar.expander(f"filtered file(delta:{st.session_state.delta})"):
+                    delta_original = {
+                    "delta_original_degree_centrality": n_df_degree,
+                    "delta_original_betweenness_centrality": n_df_bc,
+                    "delta_original_closeness_centrality": n_df_cc,
+                    "delta_original_eigenvector_centrality": n_df_ev,
+                    "delta_original_hits": n_df_hi
+                                            }
                     donwload_data(win_N_final_label, 'filtered_matrix_X(delta)')
+                    download_multiple_csvs_as_zip(delta_original, zip_name="임계치 적용 후 네트워크 행렬의 지표들(zip)")
                     donwload_data(win_BN_final_label, 'binary_matrix(delta)')
                     donwload_data(win_UN_final_label, 'undirected_binary_matrix(delta)')
 
