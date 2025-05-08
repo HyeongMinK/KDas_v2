@@ -119,7 +119,7 @@ def main():
 
         if 'df_editing' not in st.session_state:
             st.session_state['df_editing'] = st.session_state['df'].copy()
-            st.session_state['df_editing'].iloc[first_idx[0]-number_of_label,:] = st.session_state['df_editing'].iloc[first_idx[0]-number_of_label,:].astype('string')
+            #st.session_state['df_editing'].iloc[first_idx[0]-number_of_label,:] = st.session_state['df_editing'].iloc[first_idx[0]-number_of_label,:].astype('string')
             #st.session_state['df_editing'].iloc[:,first_idx[1]-number_of_label] = st.session_state['df_editing'].iloc[:,first_idx[1]-number_of_label].astype('string')
 
     if 'data_editing_log' not in st.session_state:
