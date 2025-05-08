@@ -676,9 +676,9 @@ def main():
                     "delta_bn_hits": bn_df_hi
                                             }
                     donwload_data(win_N_final_label, 'filtered_matrix_X(delta)')
-                    download_multiple_csvs_as_zip(delta_original, zip_name="임계치 적용 후 네트워크의 지표들(zip)")
+                    download_multiple_csvs_as_zip(delta_original, zip_name="delta 적용 네트워크의 지표들(zip)")
                     donwload_data(win_BN_final_label, 'binary_matrix(delta)')
-                    download_multiple_csvs_as_zip(delta_bn, zip_name="이진화된 방향성 네트워크(BN)의 지표들(zip)")
+                    download_multiple_csvs_as_zip(delta_bn, zip_name="delta 적용 BN 네트워크의 지표들(zip)")
                     donwload_data(win_UN_final_label, 'undirected_binary_matrix(delta)')
 
             except:
@@ -862,8 +862,24 @@ def main():
 
 
         with st.sidebar.expander(f"filtered file(threshold:{st.session_state.threshold})"):
+            threshold_original = {
+            "threshold_original_degree_centrality": tn_df_degree,
+            "threshold_original_betweenness_centrality": tn_df_bc,
+            "threshold_original_closeness_centrality": tn_df_cc,
+            "threshold_original_eigenvector_centrality": tn_df_ev,
+            "threshold_original_hits": tn_df_hi
+                                    }
+            threshold_bn = {
+            "threshold_bn_degree_centrality": tbn_df_degree,
+            "threshold_bn_betweenness_centrality": tbn_df_bc,
+            "threshold_bn_closeness_centrality": tbn_df_cc,
+            "threshold_bn_eigenvector_centrality": tbn_df_ev,
+            "threshold_bn_hits": tbn_df_hi
+                                    }
             donwload_data(filtered_leontief, 'filtered_leontief(threshold)')
+            download_multiple_csvs_as_zip(threshold_original, zip_name="threshold 적용 네트워크의 지표들(zip)")
             donwload_data(binary_matrix_with_label, 'binary_matrix(threshold)')
+            download_multiple_csvs_as_zip(threshold_bn, zip_name="threshold 적용 BN 네트워크의 지표들(zip)")
             donwload_data(filtered_matrix_X, 'filtered_matrix_X(threshold)')
             donwload_data(filtered_normalized, 'filtered_normalized(threshold)')
     st.sidebar.header('수정내역')
