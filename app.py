@@ -119,19 +119,12 @@ def main():
 
         if 'df_editing' not in st.session_state:
             st.session_state['df_editing'] = st.session_state['df'].copy()
-            col = first_idx[1] - number_of_label          # 라벨 열 위치
-            dtype_single = st.session_state['df_editing'].iloc[:, col].dtype
-            st.write('해당 열 dtype:', dtype_single)
-            # 1️⃣ int64 → pandas StringDtype 으로 바로 변환
-            st.session_state['df_editing'].iloc[:, col] = (
-                st.session_state['df_editing'].iloc[:, col].astype('string')
-                # 이제 1,2,3… 도 "1","2","3" 으로 변함. NaN 은 <NA> 상태
-            )
+            col = first_idx[1] - number_of_label                 # 라벨 열 위치
+            s   = st.session_state['df_editing'].iloc[:, col]    # 해당 열 Series
 
-            # 2️⃣ 문자열 열이 된 뒤에만 빈칸 채우기
-            st.session_state['df_editing'].iloc[:, col] = (
-                st.session_state['df_editing'].iloc[:, col].fillna('')   # <NA> → ''
-            )
+            # ── ① float64 → Int64(정수, NaN 허용) ─────────────────────────────
+            if pd.api.types.is_float_dtype(s):
+                s = s.astype('Int64')        # 1.0 → 1,  NaN 그대로 유지
 
 
     if 'data_editing_log' not in st.session_state:
