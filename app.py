@@ -125,7 +125,7 @@ def main():
             # ── ① float64 → Int64(정수, NaN 허용) ─────────────────────────────
             if pd.api.types.is_float_dtype(s):
                 s = s.astype('Int64')        # 1.0 → 1,  NaN 그대로 유지
-
+                st.session_state['df_editing'].iloc[:, col] = s.astype('object') 
 
     if 'data_editing_log' not in st.session_state:
         st.session_state['data_editing_log'] = ''
