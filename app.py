@@ -91,7 +91,15 @@ def main():
         uploaded_matrix_X = get_submatrix_withlabel(st.session_state['df'], first_idx[0], first_idx[1], st.session_state['mid_ID_idx'][0], st.session_state['mid_ID_idx'][1], first_idx, numberoflabel=number_of_label)
         uploaded_matrix_R = get_submatrix_withlabel(st.session_state['df'], st.session_state['mid_ID_idx'][0]+1, first_idx[1], st.session_state['df'].shape[0]-1, st.session_state['mid_ID_idx'][1], first_idx, numberoflabel=number_of_label)
         uploaded_matrix_C = get_submatrix_withlabel(st.session_state['df'], first_idx[0], st.session_state['mid_ID_idx'][1]+1, st.session_state['mid_ID_idx'][0], st.session_state['df'].shape[1]-1, first_idx, numberoflabel=number_of_label)
+
+        uploaed_files = {
+        "uploaded_df": st.session_state['df'],
+        "uploaded_matrix_X": uploaded_matrix_X,
+        "uploaded_matrix_R": uploaded_matrix_R,
+        "uploaded_matrix_C": uploaded_matrix_C
+                                }
         with st.sidebar.expander("최초 업로드 원본 파일"):
+            download_multiple_csvs_as_zip(uploaed_files, zip_name="최초 업로드 원본 파일")
             donwload_data(st.session_state['df'], 'uploaded_df')
             donwload_data(uploaded_matrix_X, 'uploaded_matrix_X')
             donwload_data(uploaded_matrix_R, 'uploaded_matrix_R')

@@ -3,6 +3,8 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import networkx as nx
+import io
+import zipfile
 
 ### 사용자 정의 함수 선언
 def make_binary_matrix(matrix, threshold):
@@ -295,6 +297,8 @@ def donwload_data(df, file_name):
     return button
 
 
+
+
 @st.cache_data()
 def load_data(file):
     st.session_state['df'] = pd.read_excel(file, header=None)
@@ -303,6 +307,31 @@ def load_data(file):
 @st.cache_data 
 def convert_df(df):
     return df.to_csv(header=False, index=False).encode('utf-8-sig')
+
+
+def download_multiple_csvs_as_zip(dfs: dict[str, pd.DataFrame], zip_name: str):
+    """
+    dfs: dict where keys are desired CSV filenames (without “.csv”) and values are DataFrames.
+    zip_name: base name for the resulting .zip file (without “.zip”).
+    """
+    # 1) 메모리 상에 ZIP 파일 생성
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for fname, df in dfs.items():
+            # DataFrame → CSV bytes
+            csv_bytes = df.to_csv(index=False).encode("utf-8-sig")
+            # ZIP 내부에 “fname.csv” 로 저장
+            zf.writestr(f"{fname}.csv", csv_bytes)
+
+    zip_buffer.seek(0)
+
+    # 2) Streamlit 다운로드 버튼
+    return st.download_button(
+        label=f"{zip_name} 다운로드",
+        data=zip_buffer,
+        file_name=f"{zip_name}.zip",
+        mime="application/zip",
+    )
 
 def compute_leontief_inverse(A, epsilon=0.05, max_iter=100):
     """
