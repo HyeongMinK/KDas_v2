@@ -683,7 +683,7 @@ def main():
                 st.session_state.threshold = threshold
 
 
-    if 'threshold' in st.session_state:
+    if 'threshold' in st.session_state and st.session_state.show_edited:
         # binary matrix 생성
         binary_matrix = make_binary_matrix(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce'), st.session_state.threshold)
         _, binary_matrix = separate_diagonals(binary_matrix)
