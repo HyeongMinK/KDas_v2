@@ -675,6 +675,19 @@ def main():
                     "delta_bn_eigenvector_centrality": bn_df_ev,
                     "delta_bn_hits": bn_df_hi
                                             }
+                    
+                    all_delta = {
+                    "filtered_matrix_X(delta)":          win_N_final_label,
+                    **delta_original,
+                    "binary_matrix(delta)":              win_BN_final_label,
+                    **delta_bn,
+                    "undirected_binary_matrix(delta)":   win_UN_final_label
+                    }
+                    
+                    download_multiple_csvs_as_zip(
+                        all_delta,
+                        zip_name="delta 적용 전체 결과들(zip)"
+                    )
                     donwload_data(win_N_final_label, 'filtered_matrix_X(delta)')
                     download_multiple_csvs_as_zip(delta_original, zip_name="delta 적용 네트워크의 지표들(zip)")
                     donwload_data(win_BN_final_label, 'binary_matrix(delta)')
