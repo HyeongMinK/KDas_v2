@@ -936,7 +936,7 @@ def main():
                     first_idx, numberoflabel=number_of_label)
 
         # 2) 편집 완료본
-        if 'df_edited' in st.session_state:
+        if 'df_edited' in st.session_state and 'edited_matrix_X' in locals():
             dfs['edited_df']           = st.session_state['df_edited']
             dfs['edited_matrix_X']     = edited_matrix_X
             dfs['edited_matrix_R']     = edited_matrix_R
@@ -952,7 +952,7 @@ def main():
             dfs['normalization_denominator'] = st.session_state['normalization_denominator']
 
         # 4) delta 필터 결과
-        if 'delta' in st.session_state:
+        if 'delta' in st.session_state and win_N_final_label in locals(): 
             dfs['filtered_matrix_X(delta)']      = win_N_final_label
             dfs['binary_matrix(delta)']          = win_BN_final_label
             dfs['undirected_binary_matrix(delta)'] = win_UN_final_label
