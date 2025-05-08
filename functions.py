@@ -266,7 +266,7 @@ def transfer_to_new_sector(df: pd.DataFrame,
 
     # ── 1) 코드‧이름 열을 문자열 dtype 으로 고정 ─────────────────────────
     label_col = first_idx[1] - code_label          # 코드가 들어 있는 열 위치
-    df_editing.iloc[:, label_col] = df_editing.iloc[:, label_col].astype(object)
+    df_editing.iloc[:, label_col] = df_editing.iloc[:, label_col].astype('string')
 
     # ── 2) origin / target 행 찾기 ───────────────────────────────────────
     target_idx_list = df_editing.index[df_editing.iloc[:, label_col] == target_code].tolist()
