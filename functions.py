@@ -262,13 +262,14 @@ def insert_row_and_col(df: pd.DataFrame,
     df_editing = df_editing.T                        # 전치 → 행 ⇔ 열
 
     row_loc = mid_ID_idx[0]
+    df_editing.iloc[:, row_loc] = df_editing.iloc[:, row_loc].astype('string')
+    
     df_editing.insert(
         loc=row_loc,
         column='a',
         value=[''] * len(df_editing),
         allow_duplicates=True
     )
-    df_editing.iloc[:, row_loc] = df_editing.iloc[:, row_loc].astype('string')
 
     df_editing.iloc[first_idx[1] - num_of_label,     row_loc] = code
     df_editing.iloc[first_idx[1] - num_of_label + 1, row_loc] = name
