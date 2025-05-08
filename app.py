@@ -558,7 +558,7 @@ def main():
                     # 6. 레이블 그리기
                     nx.draw_networkx_labels(G_bn, pos, labels=label_dict, font_size=10, ax=ax)
 
-                    ax.set_title("Binary Directed Network (BN)", fontsize=14)
+                    ax.set_title("Delta-Thresholded Binary Network (DBN)", fontsize=14)
                     ax.axis('off')
                     st.pyplot(fig)
 
