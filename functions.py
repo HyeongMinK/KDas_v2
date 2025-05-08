@@ -17,17 +17,7 @@ def filter_matrix(matrix, threshold):
     filtered_matrix = matrix.where(matrix > threshold, 0)
     return filtered_matrix
 
-@st.cache_data(
-    hash_funcs={
-        nx.DiGraph: lambda G: hash(
-            tuple(sorted(
-                (u, v, d.get('weight', None))
-                for u, v, d in G.edges(data=True)
-            ))
-        )
-    }
-)
-def calculate_network_centralities(G_bn: nx.DiGraph, df_label: pd.DataFrame, use_weight: bool = False):
+def calculate_network_centralities(G_bn, df_label, use_weight=False):
     weight_arg = 'weight' if use_weight else None
 
     # Degree
