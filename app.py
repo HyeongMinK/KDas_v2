@@ -681,40 +681,42 @@ def main():
         with col2:
             if st.button('Apply threshold'):
                 st.session_state.threshold = threshold
+                st.session_state.threshold_cal = True
 
 
     if 'threshold' in st.session_state and st.session_state.show_edited:
-        # binary matrix 생성
-        binary_matrix = make_binary_matrix(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce'), st.session_state.threshold)
-        _, binary_matrix = separate_diagonals(binary_matrix)
-        binary_matrix_with_label = st.session_state['df_for_leontief'].copy()
-        binary_matrix_with_label.iloc[2:,2:] = binary_matrix
+        if st.session_state.threshold_cal:
+            # binary matrix 생성
+            binary_matrix = make_binary_matrix(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce'), st.session_state.threshold)
+            _, binary_matrix = separate_diagonals(binary_matrix)
+            binary_matrix_with_label = st.session_state['df_for_leontief'].copy()
+            binary_matrix_with_label.iloc[2:,2:] = binary_matrix
 
 
-        filtered_matrix_X = st.session_state['df_for_leontief'].copy()
-        filtered_matrix_X.iloc[2:, 2:] = filtered_matrix_X.iloc[2:, 2:].apply(pd.to_numeric, errors='coerce')*binary_matrix
+            filtered_matrix_X = st.session_state['df_for_leontief'].copy()
+            filtered_matrix_X.iloc[2:, 2:] = filtered_matrix_X.iloc[2:, 2:].apply(pd.to_numeric, errors='coerce')*binary_matrix
 
-        filtered_normalized = st.session_state['df_normalized_with_label']
-        filtered_normalized.iloc[2:, 2:] = st.session_state['df_normalized_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce')*binary_matrix
+            filtered_normalized = st.session_state['df_normalized_with_label']
+            filtered_normalized.iloc[2:, 2:] = st.session_state['df_normalized_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce')*binary_matrix
 
-        filtered_leontief = st.session_state['df_for_leontief_with_label']
-        filtered_leontief.iloc[2:, 2:] = st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce')*binary_matrix
+            filtered_leontief = st.session_state['df_for_leontief_with_label']
+            filtered_leontief.iloc[2:, 2:] = st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce')*binary_matrix
 
-        G_tn = nx.DiGraph()
+            G_tn = nx.DiGraph()
 
-        # 모든 노드 가져오기 (고립된 노드 포함)
-        all_nodes_tn = set(range(filtered_leontief.iloc[2:, 2:].shape[0]))
-        G_tn.add_nodes_from(all_nodes_tn)  # 모든 노드 추가 (고립 노드 포함)
+            # 모든 노드 가져오기 (고립된 노드 포함)
+            all_nodes_tn = set(range(filtered_leontief.iloc[2:, 2:].shape[0]))
+            G_tn.add_nodes_from(all_nodes_tn)  # 모든 노드 추가 (고립 노드 포함)
 
-        rows_tn, cols_tn = np.where(filtered_leontief.iloc[2:, 2:] != 0)
-        weights_tn = filtered_leontief.iloc[2:, 2:].to_numpy()[rows_tn, cols_tn]
-        edges_tn = [(j, i, {'weight': w}) for i, j, w in zip(rows_tn, cols_tn, weights_tn)]
-        G_tn.add_edges_from(edges_tn)
+            rows_tn, cols_tn = np.where(filtered_leontief.iloc[2:, 2:] != 0)
+            weights_tn = filtered_leontief.iloc[2:, 2:].to_numpy()[rows_tn, cols_tn]
+            edges_tn = [(j, i, {'weight': w}) for i, j, w in zip(rows_tn, cols_tn, weights_tn)]
+            G_tn.add_edges_from(edges_tn)
 
 
-        tn_df_degree, tn_df_bc, tn_df_cc, tn_df_ev, tn_df_hi, tn_gd_in_mean, tn_gd_in_std, tn_gd_out_mean, tn_gd_out_std, tn_bc_mean, tn_bc_std, tn_cc_in_mean, tn_cc_in_std, tn_cc_out_mean, tn_cc_out_std, tn_ev_in_mean, tn_ev_in_std, tn_ev_out_mean, tn_ev_out_std, tn_hub_mean, tn_hub_std, tn_ah_mean, tn_ah_std = calculate_network_centralities(G_tn, st.session_state['df_normalized_with_label'],True)
+            tn_df_degree, tn_df_bc, tn_df_cc, tn_df_ev, tn_df_hi, tn_gd_in_mean, tn_gd_in_std, tn_gd_out_mean, tn_gd_out_std, tn_bc_mean, tn_bc_std, tn_cc_in_mean, tn_cc_in_std, tn_cc_out_mean, tn_cc_out_std, tn_ev_in_mean, tn_ev_in_std, tn_ev_out_mean, tn_ev_out_std, tn_hub_mean, tn_hub_std, tn_ah_mean, tn_ah_std = calculate_network_centralities(G_tn, st.session_state['df_normalized_with_label'],True)
 
-        tbn_df_degree, tbn_df_bc, tbn_df_cc, tbn_df_ev, tbn_df_hi, tbn_gd_in_mean, tbn_gd_in_std, tbn_gd_out_mean, tbn_gd_out_std, tbn_bc_mean, tbn_bc_std, tbn_cc_in_mean, tbn_cc_in_std, tbn_cc_out_mean, tbn_cc_out_std, tbn_ev_in_mean, tbn_ev_in_std, tbn_ev_out_mean, tbn_ev_out_std, tbn_hub_mean, tbn_hub_std, tbn_ah_mean, tbn_ah_std = calculate_network_centralities(G_tn, st.session_state['df_normalized_with_label'],False)
+            tbn_df_degree, tbn_df_bc, tbn_df_cc, tbn_df_ev, tbn_df_hi, tbn_gd_in_mean, tbn_gd_in_std, tbn_gd_out_mean, tbn_gd_out_std, tbn_bc_mean, tbn_bc_std, tbn_cc_in_mean, tbn_cc_in_std, tbn_cc_out_mean, tbn_cc_out_std, tbn_ev_in_mean, tbn_ev_in_std, tbn_ev_out_mean, tbn_ev_out_std, tbn_hub_mean, tbn_hub_std, tbn_ah_mean, tbn_ah_std = calculate_network_centralities(G_tn, st.session_state['df_normalized_with_label'],False)
 
         st.subheader('Threshold 적용 후 Filtered matrices')
 
@@ -849,6 +851,8 @@ def main():
             donwload_data(binary_matrix_with_label, 'binary_matrix(threshold)')
             donwload_data(filtered_matrix_X, 'filtered_matrix_X(threshold)')
             donwload_data(filtered_normalized, 'filtered_normalized(threshold)')
+
+        st.session_state.threshold_cal = False
     st.sidebar.header('수정내역')
     with st.sidebar.expander('수정내역 보기'):
         st.write(st.session_state['data_editing_log'])
