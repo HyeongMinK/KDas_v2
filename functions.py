@@ -244,13 +244,13 @@ def insert_row_and_col(df: pd.DataFrame,
 
     # ─────────────────────────── 1) 열 삽입 ────────────────────────────
     col_loc = mid_ID_idx[1]
+    df_editing.iloc[:, col_loc] = df_editing.iloc[:, col_loc].astype('string')
     df_editing.insert(
         loc=col_loc,
         column='a',                               # 임시 이름
         value=[''] * len(df_editing),             # '' ⇒ 문자열
         allow_duplicates=True
     )
-    df_editing.iloc[:, col_loc] = df_editing.iloc[:, col_loc].astype('string')
 
     # 코드/이름 입력 + 숫자 구간 '0'(문자)
     df_editing.iloc[first_idx[0] - num_of_label,     col_loc] = code
