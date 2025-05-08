@@ -230,92 +230,82 @@ def get_mid_ID_idx(df, first_idx):
 
     return (first_idx[0]+size, first_idx[1]+size)
 
-def insert_row_and_col(df: pd.DataFrame,
-                       first_idx: tuple[int, int],
-                       mid_ID_idx: tuple[int, int],
-                       code: str,
-                       name: str,
-                       num_of_label: int = 0):
-    """
-    새 열과 새 행을 동시에 삽입한다.
-
-    Parameters
-    ----------
-    df : 원본 DataFrame
-    first_idx : (row_start, col_start)
-        - row_start : 숫자 구간이 시작되는 첫 행 인덱스
-        - col_start : 숫자 구간이 시작되는 첫 열 인덱스
-    mid_ID_idx : (row_loc, col_loc)
-        - col_loc : 새 열을 삽입할 위치
-        - row_loc : 새 행을 삽입할 위치
-    code, name : 삽입할 코드·이름(문자열)
-    num_of_label : 숫자 구간 위·왼쪽에 있는 라벨 행/열의 개수
-    """
-    # ---------- 1) 열 삽입 ----------
-    col_loc = mid_ID_idx[1]
-    df_work = df.copy()
-    df_work.insert(loc=col_loc,       # 삽입 위치
-                   column='new_col',  # 임시 이름
-                   value=[''] * len(df_work))  # ''로 채워 문자열 dtype 확보
-
-    # 코드·이름 기입
-    code_row = first_idx[0] - num_of_label
-    name_row = code_row + 1
-    df_work.iloc[code_row, col_loc] = code
-    df_work.iloc[name_row, col_loc] = name
-
-    # 숫자 구간은 '0'(문자열)로 채움
-    df_work.iloc[first_idx[0]:, col_loc] = '0'
-
-    # ---------- 2) 행 삽입 ----------
-    row_loc = mid_ID_idx[0]
-    n_cols  = df_work.shape[1]
-
-    # 두 줄(code, name)짜리 빈 DataFrame 생성
-    new_rows = pd.DataFrame([[''] * n_cols, [''] * n_cols],
-                            columns=df_work.columns)
-
-    code_col = first_idx[1] - num_of_label
-    new_rows.iloc[0, code_col] = code
-    new_rows.iloc[1, code_col] = name
-    new_rows.iloc[:, first_idx[1]:] = '0'  # 숫자 구간은 '0'
-
-    # 행 결합
-    top    = df_work.iloc[:row_loc - num_of_label]
-    bottom = df_work.iloc[row_loc - num_of_label:]
-    df_final = pd.concat([top, new_rows, bottom], ignore_index=True)
-
-    # ---------- 3) 반환 ----------
-    # 열·행이 하나씩 추가됐으므로 인덱스 +1
-    updated_mid_ID_idx = (mid_ID_idx[0] + 1, mid_ID_idx[1] + 1)
+def insert_row_and_col(df, first_idx, mid_ID_idx, code, name, num_of_label):
+    df_editing = df.copy()
+    df_editing.insert(loc=mid_ID_idx[1], column='a', value=np.nan, allow_duplicates=True)
+    df_editing.iloc[first_idx[0]-num_of_label, mid_ID_idx[1]] = code
+    df_editing.iloc[first_idx[0]-num_of_label+1, mid_ID_idx[1]] = name
+    df_editing.iloc[first_idx[0]:, mid_ID_idx[1]] = 0
+    df_editing.columns = range(df_editing.shape[1])
+    df_editing = df_editing.T   
+    df_editing.insert(loc=mid_ID_idx[0], column='a', value=np.nan, allow_duplicates=True)
+    df_editing.iloc[first_idx[1]-num_of_label, mid_ID_idx[0]] = code
+    df_editing.iloc[first_idx[1]-num_of_label+1, mid_ID_idx[0]] = name
+    df_editing.iloc[first_idx[1]:, mid_ID_idx[0]] = 0
+    df_editing.columns = range(df_editing.shape[1])
+    df_editing = df_editing.T
+    df_inserted = df_editing.copy()
+    mid_ID_idx = (mid_ID_idx[0]+1, mid_ID_idx[1]+1)
     msg = f'A new row and column (Code: {code}, Name: {name}) have been inserted.'
 
-    return df_final, updated_mid_ID_idx, msg
+    return df_inserted, mid_ID_idx, msg
 
-def transfer_to_new_sector(df, first_idx, origin_code, target_code, ratio, code_label = 2):
+
+def transfer_to_new_sector(df: pd.DataFrame,
+                           first_idx: tuple[int, int],
+                           origin_code: str,
+                           target_code: str,
+                           ratio: float,
+                           code_label: int = 2):
+    """
+    코드·이름이 들어 있는 '레이블 열'만 문자열(object)로 고정하고,
+    나머지 숫자 영역은 그대로 숫자 dtype 을 유지한 채
+    origin_code 의 값 일부를 target_code 로 이동한다.
+    """
     df_editing = df.copy()
-    target_idx = df_editing.index[df_editing[first_idx[1]-code_label] == target_code].tolist()
-    if len(target_idx) == 1:
-        target_idx = target_idx[0]
-    else:
+
+    # ── 1) 코드‧이름 열을 문자열 dtype 으로 고정 ─────────────────────────
+    label_col = first_idx[1] - code_label          # 코드가 들어 있는 열 위치
+    df_editing.iloc[:, label_col] = df_editing.iloc[:, label_col].astype(object)
+
+    # ── 2) origin / target 행 찾기 ───────────────────────────────────────
+    target_idx_list = df_editing.index[df_editing.iloc[:, label_col] == target_code].tolist()
+    if len(target_idx_list) != 1:
         msg = 'ERROR: target code is not unique.'
         return df_editing, msg
-    origin_idx = df_editing.index[df_editing[first_idx[1]-code_label] == origin_code].tolist()
-    if len(origin_idx) == 1:
-        origin_idx = origin_idx[0]
-    else:
+    target_row = target_idx_list[0]
+
+    origin_idx_list = df_editing.index[df_editing.iloc[:, label_col] == origin_code].tolist()
+    if len(origin_idx_list) != 1:
         msg = 'ERROR: origin code is not unique.'
         return df_editing, msg
-    df_editing.iloc[first_idx[0]:, first_idx[1]:] = df_editing.iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
-    origin_idx = (origin_idx, origin_idx-first_idx[0]+first_idx[1])
-    target_idx = (target_idx, target_idx-first_idx[0]+first_idx[1])
-    df_editing.iloc[target_idx[0] ,first_idx[1]:] += df_editing.iloc[origin_idx[0] ,first_idx[1]:] * ratio
-    df_editing.iloc[origin_idx[0] ,first_idx[1]:] = df_editing.iloc[origin_idx[0] ,first_idx[1]:] * (1-ratio)
-    df_editing.iloc[first_idx[0]: ,target_idx[1]] += df_editing.iloc[first_idx[0]: ,origin_idx[1]] * ratio
-    df_editing.iloc[first_idx[0]: ,origin_idx[1]] = df_editing.iloc[first_idx[0]: ,origin_idx[1]] * (1-ratio)
+    origin_row = origin_idx_list[0]
 
-    msg = f'{ratio*100}% of {origin_code} has been moved to {target_code}.'
+    # ── 3) 숫자 영역만 float 로 변환해 계산 준비 ──────────────────────────
+    #     first_idx = (row_start, col_start) ⇒ 숫자 블록 좌상단 좌표
+    num_block = df_editing.iloc[first_idx[0]:, first_idx[1]:]
+    df_editing.iloc[first_idx[0]:, first_idx[1]:] = num_block.apply(
+        pd.to_numeric, errors='coerce')
+
+    # 행·열 보정 인덱스 (row, col) 형태
+    origin = (origin_row,
+              origin_row - first_idx[0] + first_idx[1])
+    target = (target_row,
+              target_row - first_idx[0] + first_idx[1])
+
+    # ── 4) 행 단위 이동 ─────────────────────────────────────────────────
+    df_editing.iloc[target[0], first_idx[1]:] += (
+        df_editing.iloc[origin[0], first_idx[1]:] * ratio)
+    df_editing.iloc[origin[0], first_idx[1]:] *= (1 - ratio)
+
+    # ── 5) 열 단위 이동 ─────────────────────────────────────────────────
+    df_editing.iloc[first_idx[0]:, target[1]] += (
+        df_editing.iloc[first_idx[0]:, origin[1]] * ratio)
+    df_editing.iloc[first_idx[0]:, origin[1]] *= (1 - ratio)
+
+    msg = f'{ratio*100:.1f}% of {origin_code} has been moved to {target_code}.'
     return df_editing, msg
+
 
 def remove_zero_series(df, first_idx, mid_ID_idx):
     df_editing = df.copy()
