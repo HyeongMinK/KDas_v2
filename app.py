@@ -636,6 +636,7 @@ def main():
     if 'threshold' in st.session_state:
         # binary matrix 생성
         binary_matrix = make_binary_matrix(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].apply(pd.to_numeric, errors='coerce'), st.session_state.threshold)
+        _, binary_matrix = separate_diagonals(binary_matrix)
         binary_matrix_with_label = st.session_state['df_for_leontief'].copy()
         binary_matrix_with_label.iloc[2:,2:] = binary_matrix
 
