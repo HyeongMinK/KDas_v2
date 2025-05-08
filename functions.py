@@ -309,26 +309,24 @@ def convert_df(df):
     return df.to_csv(header=False, index=False).encode('utf-8-sig')
 
 
-def download_multiple_csvs_as_zip(dfs: dict[str, pd.DataFrame], zip_name: str):
+@st.cache_data
+def make_zip_bytes(dfs: dict[str, pd.DataFrame]) -> bytes:
     """
-    dfs: dict where keys are desired CSV filenames (without “.csv”) and values are DataFrames.
-    zip_name: base name for the resulting .zip file (without “.zip”).
+    dfs: dict where keys are desired CSV filenames and values are DataFrames.
+    반환값: ZIP 파일의 바이너리
     """
-    # 1) 메모리 상에 ZIP 파일 생성
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for fname, df in dfs.items():
-            # DataFrame → CSV bytes
             csv_bytes = df.to_csv(index=False).encode("utf-8-sig")
-            # ZIP 내부에 “fname.csv” 로 저장
             zf.writestr(f"{fname}.csv", csv_bytes)
+    return buf.getvalue()
 
-    zip_buffer.seek(0)
-
-    # 2) Streamlit 다운로드 버튼
+def download_multiple_csvs_as_zip(dfs: dict[str, pd.DataFrame], zip_name: str):
+    zip_bytes = make_zip_bytes(dfs)
     return st.download_button(
         label=f"{zip_name} 다운로드",
-        data=zip_buffer,
+        data=zip_bytes,
         file_name=f"{zip_name}.zip",
         mime="application/zip",
     )
