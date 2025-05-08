@@ -244,7 +244,7 @@ def insert_row_and_col(df: pd.DataFrame,
 
     # ─────────────────────────── 1) 열 삽입 ────────────────────────────
     col_loc = mid_ID_idx[1]
-    df_editing.iloc[:, col_loc] = df_editing.iloc[:, col_loc].astype('string')
+    df_editing.iloc[first_idx[0] - num_of_label, :] = df_editing.iloc[first_idx[0] - num_of_label, :].astype('string')
     df_editing.insert(
         loc=col_loc,
         column='a',                               # 임시 이름
@@ -262,8 +262,8 @@ def insert_row_and_col(df: pd.DataFrame,
     df_editing = df_editing.T                        # 전치 → 행 ⇔ 열
 
     row_loc = mid_ID_idx[0]
-    df_editing.iloc[:, row_loc] = df_editing.iloc[:, row_loc].astype('string')
-    
+    df_editing.iloc[first_idx[1] - num_of_label, :] = df_editing.iloc[first_idx[1] - num_of_label, :].astype('string')
+
     df_editing.insert(
         loc=row_loc,
         column='a',
