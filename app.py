@@ -642,8 +642,13 @@ def main():
             "부가가치계벡터": st.session_state['added_value_denominator']
             }
             download_multiple_csvs_as_zip(leontief_files, zip_name="Leontief 과정(zip)")
-            donwload_data(st.session_state['df_normalized_with_label'], 'normalized')
+            donwload_data(st.session_state['normalization_denominator'], 'normailization denominator')
+            donwload_data(st.session_state['df_normalized_with_label'], '투입계수행렬')
             donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
+            donwload_data(st.session_state['fl_bl'], 'FL-BL')
+            donwload_data(st.session_state['df_for_r_with_label'], '부가가치계수행렬')
+            donwload_data(st.session_state['added_value_denominator'], '부가가치계벡터')
+
 
 
         st.header("아래는 임계값을 기준으로 filtering 결과")
