@@ -99,7 +99,7 @@ def main():
         "uploaded_matrix_C": uploaded_matrix_C
                                 }
         with st.sidebar.expander("최초 업로드 원본 파일"):
-            download_multiple_csvs_as_zip(uploaed_files, zip_name="최초 업로드 원본 파일.zip")
+            download_multiple_csvs_as_zip(uploaed_files, zip_name="최초 업로드 원본 파일(zip)")
             donwload_data(st.session_state['df'], 'uploaded_df')
             donwload_data(uploaded_matrix_X, 'uploaded_matrix_X')
             donwload_data(uploaded_matrix_R, 'uploaded_matrix_R')
@@ -187,7 +187,7 @@ def main():
         "edited_matrix_C": edited_matrix_C
                                 }
         with st.sidebar.expander("수정된 파일"):
-            download_multiple_csvs_as_zip(edited_files, zip_name="수정된 파일.zip")
+            download_multiple_csvs_as_zip(edited_files, zip_name="수정된 파일(zip)")
             donwload_data(st.session_state['df_edited'], 'edited_df')
             donwload_data(edited_matrix_X, 'edited_matrix_X')
             donwload_data(edited_matrix_R, 'edited_matrix_R')
