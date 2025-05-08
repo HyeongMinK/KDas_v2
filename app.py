@@ -622,7 +622,7 @@ def main():
             donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
 
 
-        st.header("DataFrame을 임계값을 기준으로 filtering 합니다.")
+        st.header("아래는 임계값을 기준으로 filtering")
         st.subheader('threshold에 따른 생존비율 그래프')
         threshold_count(st.session_state['df_for_leontief_with_label'].iloc[2:, 2:])
         col1, col2= st.columns(2)
