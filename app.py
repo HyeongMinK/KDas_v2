@@ -952,7 +952,7 @@ def main():
             dfs['normalization_denominator'] = st.session_state['normalization_denominator']
 
         # 4) delta 필터 결과
-        if 'delta' in st.session_state and win_N_final_label in locals(): 
+        if 'delta' in st.session_state and 'win_N_final_label' in locals(): 
             dfs['filtered_matrix_X(delta)']      = win_N_final_label
             dfs['binary_matrix(delta)']          = win_BN_final_label
             dfs['undirected_binary_matrix(delta)'] = win_UN_final_label
@@ -993,7 +993,7 @@ def main():
         all_dfs = _gather_all_dataframes()
         if all_dfs:
             download_multiple_csvs_as_zip(all_dfs, zip_name="IO_analysis_all_results(zip)")
-            
+
         else:
             st.write("아직 저장된 결과가 없습니다. 먼저 분석을 실행하세요.")
     st.sidebar.header('수정내역')
