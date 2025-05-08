@@ -641,7 +641,7 @@ def main():
             "부가가치계수행렬": st.session_state['df_for_r_with_label'],
             "부가가치계벡터": st.session_state['added_value_denominator']
             }
-            download_multiple_csvs_as_zip(leontief_files, zip_name="Leontief 과정 matrices(zip)")
+            download_multiple_csvs_as_zip(leontief_files, zip_name="Leontief 과정(zip)")
             donwload_data(st.session_state['df_normalized_with_label'], 'normalized')
             donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
 
