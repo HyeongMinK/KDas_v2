@@ -835,7 +835,7 @@ def main():
             st.write(filtered_normalized)
 
 
-        with st.sidebar.expander(f"filtered file(threshold):{st.session_state.threshold}"):
+        with st.sidebar.expander(f"filtered file(threshold:{st.session_state.threshold})"):
             donwload_data(binary_matrix, 'binary_matrix')
             donwload_data(filtered_matrix_X, 'filtered_matrix_X')
             donwload_data(filtered_normalized, 'filtered_normalized')
