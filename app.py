@@ -680,6 +680,7 @@ def main():
                     donwload_data(win_BN_final_label, 'binary_matrix(delta)')
                     download_multiple_csvs_as_zip(delta_bn, zip_name="delta 적용 BN 네트워크의 지표들(zip)")
                     donwload_data(win_UN_final_label, 'undirected_binary_matrix(delta)')
+                    
 
             except:
                 st.write("Delta 값이 너무 큽니다. 값을 줄여주세요.")
