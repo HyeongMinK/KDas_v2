@@ -640,6 +640,13 @@ def main():
                         st.write("HITS Authorities: Mean =", bn_ah_mean, ", Std =", bn_ah_std)
                 with col3_net:
                     st.write(win_UN_final_label)
+
+
+                with st.sidebar.expander(f"filtered file(delta:{st.session_state.delta})"):
+                    donwload_data(win_N_final_label, 'filtered_matrix_X(delta)')
+                    donwload_data(win_BN_final_label, 'binary_matrix(delta)')
+                    donwload_data(win_UN_final_label, 'undirected_binary_matrix(delta)')
+
             except:
                 st.write("Delta 값이 너무 큽니다. 값을 줄여주세요.")
 
