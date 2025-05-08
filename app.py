@@ -119,9 +119,9 @@ def main():
 
         if 'df_editing' not in st.session_state:
             st.session_state['df_editing'] = st.session_state['df'].copy()
+            col = first_idx[1] - number_of_label          # 라벨 열 위치
             dtype_single = st.session_state['df_editing'].iloc[:, col].dtype
             st.write('해당 열 dtype:', dtype_single)
-            col = first_idx[1] - number_of_label          # 라벨 열 위치
             # 1️⃣ int64 → pandas StringDtype 으로 바로 변환
             st.session_state['df_editing'].iloc[:, col] = (
                 st.session_state['df_editing'].iloc[:, col].astype('string')
