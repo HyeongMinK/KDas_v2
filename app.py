@@ -989,10 +989,11 @@ def main():
             })
 
         return dfs
-    #with st.sidebar.expander("전체 결과 ZIP 다운로드"):
+    with st.sidebar.expander("전체 결과 ZIP 다운로드"):
         all_dfs = _gather_all_dataframes()
         if all_dfs:
             download_multiple_csvs_as_zip(all_dfs, zip_name="IO_analysis_all_results(zip)")
+            
         else:
             st.write("아직 저장된 결과가 없습니다. 먼저 분석을 실행하세요.")
     st.sidebar.header('수정내역')
