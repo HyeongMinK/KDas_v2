@@ -911,6 +911,90 @@ def main():
             download_multiple_csvs_as_zip(threshold_bn, zip_name="threshold 적용 BN 네트워크의 지표들(zip)")
             donwload_data(filtered_matrix_X, 'filtered_matrix_X(threshold)')
             donwload_data(filtered_normalized, 'filtered_normalized(threshold)')
+
+    
+            # [공통] 필요한 곳에 한 번만 넣어 두세요
+    def _gather_all_dataframes() -> dict[str, pd.DataFrame]:
+        """session_state 안에 존재하는 모든 DataFrame을 한 ZIP으로 묶을 dict 생성"""
+        dfs: dict[str, pd.DataFrame] = {}
+
+        # 1) 최초 업로드 원본
+        if 'df' in st.session_state:
+            dfs['uploaded_df']          = st.session_state['df']
+            if 'mid_ID_idx' in st.session_state:
+                dfs['uploaded_matrix_X'] = get_submatrix_withlabel(
+                    st.session_state['df'], first_idx[0], first_idx[1],
+                    st.session_state['mid_ID_idx'][0], st.session_state['mid_ID_idx'][1],
+                    first_idx, numberoflabel=number_of_label)
+                dfs['uploaded_matrix_R'] = get_submatrix_withlabel(
+                    st.session_state['df'], st.session_state['mid_ID_idx'][0]+1, first_idx[1],
+                    st.session_state['df'].shape[0]-1, st.session_state['mid_ID_idx'][1],
+                    first_idx, numberoflabel=number_of_label)
+                dfs['uploaded_matrix_C'] = get_submatrix_withlabel(
+                    st.session_state['df'], first_idx[0], st.session_state['mid_ID_idx'][1]+1,
+                    st.session_state['mid_ID_idx'][0], st.session_state['df'].shape[1]-1,
+                    first_idx, numberoflabel=number_of_label)
+
+        # 2) 편집 완료본
+        if 'df_edited' in st.session_state:
+            dfs['edited_df']           = st.session_state['df_edited']
+            dfs['edited_matrix_X']     = edited_matrix_X
+            dfs['edited_matrix_R']     = edited_matrix_R
+            dfs['edited_matrix_C']     = edited_matrix_C
+
+        # 3) Leontief 관련
+        if 'df_for_leontief_with_label' in st.session_state:
+            dfs['투입계수행렬']             = st.session_state['df_normalized_with_label']
+            dfs['leontief_inverse']        = st.session_state['df_for_leontief_with_label']
+            dfs['FL_BL']                   = st.session_state['fl_bl']
+            dfs['부가가치계수행렬']          = st.session_state['df_for_r_with_label']
+            dfs['부가가치계벡터']            = st.session_state['added_value_denominator']
+            dfs['normalization_denominator'] = st.session_state['normalization_denominator']
+
+        # 4) delta 필터 결과
+        if 'delta' in st.session_state:
+            dfs['filtered_matrix_X(delta)']      = win_N_final_label
+            dfs['binary_matrix(delta)']          = win_BN_final_label
+            dfs['undirected_binary_matrix(delta)'] = win_UN_final_label
+            dfs.update({                         # 지표들
+                'delta_original_degree_centrality':      n_df_degree,
+                'delta_original_betweenness_centrality': n_df_bc,
+                'delta_original_closeness_centrality':   n_df_cc,
+                'delta_original_eigenvector_centrality': n_df_ev,
+                'delta_original_hits':                  n_df_hi,
+                'delta_bn_degree_centrality':           bn_df_degree,
+                'delta_bn_betweenness_centrality':      bn_df_bc,
+                'delta_bn_closeness_centrality':        bn_df_cc,
+                'delta_bn_eigenvector_centrality':      bn_df_ev,
+                'delta_bn_hits':                        bn_df_hi,
+            })
+
+        # 5) threshold 필터 결과
+        if 'threshold' in st.session_state and 'binary_matrix_with_label' in locals():
+            dfs['filtered_leontief(threshold)']   = filtered_leontief
+            dfs['binary_matrix(threshold)']       = binary_matrix_with_label
+            dfs['filtered_matrix_X(threshold)']   = filtered_matrix_X
+            dfs['filtered_normalized(threshold)'] = filtered_normalized
+            dfs.update({
+                'threshold_original_degree_centrality':      tn_df_degree,
+                'threshold_original_betweenness_centrality': tn_df_bc,
+                'threshold_original_closeness_centrality':   tn_df_cc,
+                'threshold_original_eigenvector_centrality': tn_df_ev,
+                'threshold_original_hits':                  tn_df_hi,
+                'threshold_bn_degree_centrality':           tbn_df_degree,
+                'threshold_bn_betweenness_centrality':      tbn_df_bc,
+                'threshold_bn_closeness_centrality':        tbn_df_cc,
+                'threshold_bn_eigenvector_centrality':      tbn_df_ev,
+                'threshold_bn_hits':                        tbn_df_hi,
+            })
+
+        return dfs
+    with st.sidebar.expander("전체 결과 ZIP 다운로드"):
+        all_dfs = _gather_all_dataframes()
+        if all_dfs:
+            download_multiple_csvs_as_zip(all_dfs, zip_name="IO_analysis_all_results(zip)")
+        else:
+            st.write("아직 저장된 결과가 없습니다. 먼저 분석을 실행하세요.")
     st.sidebar.header('수정내역')
     with st.sidebar.expander('수정내역 보기'):
         st.write(st.session_state['data_editing_log'])
