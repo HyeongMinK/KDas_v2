@@ -851,8 +851,6 @@ def main():
             donwload_data(binary_matrix_with_label, 'binary_matrix(threshold)')
             donwload_data(filtered_matrix_X, 'filtered_matrix_X(threshold)')
             donwload_data(filtered_normalized, 'filtered_normalized(threshold)')
-
-        st.session_state.threshold_cal = False
     st.sidebar.header('수정내역')
     with st.sidebar.expander('수정내역 보기'):
         st.write(st.session_state['data_editing_log'])
