@@ -668,9 +668,17 @@ def main():
                     "delta_original_eigenvector_centrality": n_df_ev,
                     "delta_original_hits": n_df_hi
                                             }
+                    delta_bn = {
+                    "delta_bn_degree_centrality": bn_df_degree,
+                    "delta_bn_betweenness_centrality": bn_df_bc,
+                    "delta_bn_closeness_centrality": bn_df_cc,
+                    "delta_bn_eigenvector_centrality": bn_df_ev,
+                    "delta_bn_hits": bn_df_hi
+                                            }
                     donwload_data(win_N_final_label, 'filtered_matrix_X(delta)')
-                    download_multiple_csvs_as_zip(delta_original, zip_name="임계치 적용 후 네트워크 행렬의 지표들(zip)")
+                    download_multiple_csvs_as_zip(delta_original, zip_name="임계치 적용 후 네트워크의 지표들(zip)")
                     donwload_data(win_BN_final_label, 'binary_matrix(delta)')
+                    download_multiple_csvs_as_zip(delta_bn, zip_name="이진화된 방향성 네트워크(BN)의 지표들(zip)")
                     donwload_data(win_UN_final_label, 'undirected_binary_matrix(delta)')
 
             except:
