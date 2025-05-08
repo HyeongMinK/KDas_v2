@@ -180,6 +180,12 @@ def main():
         edited_matrix_X = get_submatrix_withlabel(st.session_state['df_edited'], first_idx[0],first_idx[1], st.session_state['mid_ID_idx'][0], st.session_state['mid_ID_idx'][1], first_idx, numberoflabel = 2)
         edited_matrix_R = get_submatrix_withlabel(st.session_state['df_edited'], st.session_state['mid_ID_idx'][0]+1,first_idx[1], st.session_state['df_edited'].shape[0]-1, st.session_state['mid_ID_idx'][1], first_idx, numberoflabel = 2)
         edited_matrix_C = get_submatrix_withlabel(st.session_state['df_edited'], first_idx[0], st.session_state['mid_ID_idx'][1]+1, st.session_state['mid_ID_idx'][0], st.session_state['df_edited'].shape[1]-1, first_idx, numberoflabel = 2)
+        edited_files = {
+        "edited_df": st.session_state['df_edited'],
+        "edited_matrix_X": edited_matrix_X,
+        "edited_matrix_R": edited_matrix_R,
+        "edited_matrix_C": edited_matrix_C
+                                }
         with st.sidebar.expander("수정된 파일"):
             donwload_data(st.session_state['df_edited'], 'edited_df')
             donwload_data(edited_matrix_X, 'edited_matrix_X')
