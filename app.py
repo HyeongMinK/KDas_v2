@@ -187,6 +187,7 @@ def main():
         "edited_matrix_C": edited_matrix_C
                                 }
         with st.sidebar.expander("수정된 파일"):
+            download_multiple_csvs_as_zip(edited_files, zip_name="수정된 파일.zip")
             donwload_data(st.session_state['df_edited'], 'edited_df')
             donwload_data(edited_matrix_X, 'edited_matrix_X')
             donwload_data(edited_matrix_R, 'edited_matrix_R')
