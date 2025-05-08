@@ -395,7 +395,7 @@ def main():
 
 
         
-        st.subheader("Plot (직접 다운 받아야 합니다.)")
+        st.subheader("FL-BL Plot")
         # 세션 상태에서 ids_simbol의 값들 가져오기 (리스트 형태로 변환)
         ids_values = [item for sublist in st.session_state.ids_simbol.values() for item in sublist]
         # 부문명칭 값이 ids_values에 포함된 경우와 그렇지 않은 경우 분리
