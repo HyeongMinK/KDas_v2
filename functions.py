@@ -230,60 +230,25 @@ def get_mid_ID_idx(df, first_idx):
 
     return (first_idx[0]+size, first_idx[1]+size)
 
-def insert_row_and_col(df: pd.DataFrame,
-                       first_idx: tuple[int, int],
-                       mid_ID_idx: tuple[int, int],
-                       code: str,
-                       name: str,
-                       num_of_label: int = 0):
-    """
-    새 열과 새 행을 삽입하되, 삽입된 열/행은 string dtype 으로 고정하여
-    다른 숫자 열이 float(1 → 1.0) 로 바뀌는 일을 막는다.
-    """
+def insert_row_and_col(df, first_idx, mid_ID_idx, code, name, num_of_label):
     df_editing = df.copy()
-
-    # ─────────────────────────── 1) 열 삽입 ────────────────────────────
-    col_loc = mid_ID_idx[1]
-    df_editing.iloc[first_idx[0] - num_of_label, :] = df_editing.iloc[first_idx[0] - num_of_label, :].astype('string')
-    df_editing.insert(
-        loc=col_loc,
-        column='a',                               # 임시 이름
-        value=[''] * len(df_editing),             # '' ⇒ 문자열
-        allow_duplicates=True
-    )
-
-    # 코드/이름 입력 + 숫자 구간 '0'(문자)
-    df_editing.iloc[first_idx[0] - num_of_label,     col_loc] = code
-    df_editing.iloc[first_idx[0] - num_of_label + 1, col_loc] = name
-    df_editing.iloc[first_idx[0]:, col_loc] = '0'    # 문자열 '0'
-
-    # ─────────────────────────── 2) 행 삽입 ────────────────────────────
+    df_editing.insert(loc=mid_ID_idx[1], column='a', value=np.nan, allow_duplicates=True)
+    df_editing.iloc[first_idx[0]-num_of_label, mid_ID_idx[1]] = code
+    df_editing.iloc[first_idx[0]-num_of_label+1, mid_ID_idx[1]] = name
+    df_editing.iloc[first_idx[0]:, mid_ID_idx[1]] = 0
     df_editing.columns = range(df_editing.shape[1])
-    df_editing = df_editing.T                        # 전치 → 행 ⇔ 열
-
-    row_loc = mid_ID_idx[0]
-    df_editing.iloc[first_idx[1] - num_of_label, :] = df_editing.iloc[first_idx[1] - num_of_label, :].astype('string')
-
-    df_editing.insert(
-        loc=row_loc,
-        column='a',
-        value=[''] * len(df_editing),
-        allow_duplicates=True
-    )
-
-    df_editing.iloc[first_idx[1] - num_of_label,     row_loc] = code
-    df_editing.iloc[first_idx[1] - num_of_label + 1, row_loc] = name
-    df_editing.iloc[first_idx[1]:, row_loc] = '0'
-
-    # ─────────────────────────── 3) 마무리 ─────────────────────────────
+    df_editing = df_editing.T   
+    df_editing.insert(loc=mid_ID_idx[0], column='a', value=np.nan, allow_duplicates=True)
+    df_editing.iloc[first_idx[1]-num_of_label, mid_ID_idx[0]] = code
+    df_editing.iloc[first_idx[1]-num_of_label+1, mid_ID_idx[0]] = name
+    df_editing.iloc[first_idx[1]:, mid_ID_idx[0]] = 0
     df_editing.columns = range(df_editing.shape[1])
-    df_inserted = df_editing.T                      # 원래 방향으로 복구
-
-    # 새 행·열이 하나씩 늘었으므로 +1
-    new_mid_ID_idx = (mid_ID_idx[0] + 1, mid_ID_idx[1] + 1)
+    df_editing = df_editing.T
+    df_inserted = df_editing.copy()
+    mid_ID_idx = (mid_ID_idx[0]+1, mid_ID_idx[1]+1)
     msg = f'A new row and column (Code: {code}, Name: {name}) have been inserted.'
 
-    return df_inserted, new_mid_ID_idx, msg
+    return df_inserted, mid_ID_idx, msg
 
 def transfer_to_new_sector(df, first_idx, origin_code, target_code, ratio, code_label = 2):
     df_editing = df.copy()
