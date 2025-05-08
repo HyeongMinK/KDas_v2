@@ -836,10 +836,10 @@ def main():
 
 
         with st.sidebar.expander(f"filtered file(threshold:{st.session_state.threshold})"):
-            donwload_data(binary_matrix, 'binary_matrix')
-            donwload_data(filtered_matrix_X, 'filtered_matrix_X')
-            donwload_data(filtered_normalized, 'filtered_normalized')
-            donwload_data(filtered_leontief, 'filtered_leontief')
+            donwload_data(filtered_leontief, 'filtered_leontief(threshold)')
+            donwload_data(binary_matrix_with_label, 'binary_matrix(threshold)')
+            donwload_data(filtered_matrix_X, 'filtered_matrix_X(threshold)')
+            donwload_data(filtered_normalized, 'filtered_normalized(threshold)')
     st.sidebar.header('수정내역')
     with st.sidebar.expander('수정내역 보기'):
         st.write(st.session_state['data_editing_log'])
