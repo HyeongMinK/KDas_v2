@@ -406,6 +406,18 @@ def main():
         # Streamlit에서 그래프 표시
         st.pyplot(fig)
 
+        # 사이드바 expander 에 다운로드 버튼 추가
+        with st.sidebar.expander("Plot 다운로드"):
+            buf = io.BytesIO()
+            # PNG 포맷으로 버퍼에 저장
+            fig.savefig(buf, format="png", bbox_inches="tight")
+            buf.seek(0)
+            st.download_button(
+                label="Plot 이미지 다운로드",
+                data=buf,
+                file_name="fl_bl_plot.png",
+                mime="image/png"
+            )
 
         win_A = st.session_state['df_normalized_with_label'].iloc[2:, 2:].copy().values
         win_epsilon = 0.05
