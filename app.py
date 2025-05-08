@@ -375,6 +375,25 @@ def main():
             st.write("모든 대각 원소가 1보다 큽니다.")
 
 
+
+        with st.sidebar.expander('Leontief 과정 matrices'):
+            leontief_files = {
+            "normalization_denominator": st.session_state['normalization_denominator'],
+            "투입계수행렬": st.session_state['df_normalized_with_label'],
+            "leontief inverse": st.session_state['df_for_leontief_with_label'],
+            "FL-BL": st.session_state['fl_bl'],
+            "부가가치계수행렬": st.session_state['df_for_r_with_label'],
+            "부가가치계벡터": st.session_state['added_value_denominator']
+            }
+            download_multiple_csvs_as_zip(leontief_files, zip_name="Leontief 과정(zip)")
+            donwload_data(st.session_state['normalization_denominator'], 'normailization denominator')
+            donwload_data(st.session_state['df_normalized_with_label'], '투입계수행렬')
+            donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
+            donwload_data(st.session_state['fl_bl'], 'FL-BL')
+            donwload_data(st.session_state['df_for_r_with_label'], '부가가치계수행렬')
+            donwload_data(st.session_state['added_value_denominator'], '부가가치계벡터')
+
+
         
         st.subheader("Plot (직접 다운 받아야 합니다.)")
         # 세션 상태에서 ids_simbol의 값들 가져오기 (리스트 형태로 변환)
@@ -650,23 +669,6 @@ def main():
             except:
                 st.write("Delta 값이 너무 큽니다. 값을 줄여주세요.")
 
-
-        with st.sidebar.expander('Leontief 과정 matrices'):
-            leontief_files = {
-            "normalization_denominator": st.session_state['normalization_denominator'],
-            "투입계수행렬": st.session_state['df_normalized_with_label'],
-            "leontief inverse": st.session_state['df_for_leontief_with_label'],
-            "FL-BL": st.session_state['fl_bl'],
-            "부가가치계수행렬": st.session_state['df_for_r_with_label'],
-            "부가가치계벡터": st.session_state['added_value_denominator']
-            }
-            download_multiple_csvs_as_zip(leontief_files, zip_name="Leontief 과정(zip)")
-            donwload_data(st.session_state['normalization_denominator'], 'normailization denominator')
-            donwload_data(st.session_state['df_normalized_with_label'], '투입계수행렬')
-            donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
-            donwload_data(st.session_state['fl_bl'], 'FL-BL')
-            donwload_data(st.session_state['df_for_r_with_label'], '부가가치계수행렬')
-            donwload_data(st.session_state['added_value_denominator'], '부가가치계벡터')
 
 
 
