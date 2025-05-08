@@ -709,7 +709,7 @@ def main():
 
         st.subheader('Threshold 적용 후 Filtered matrices')
 
-        col1, col2, col3, col4 = st.tabs(['Filtered_leontief', 'Binary_matrix','Filtered_matrix','Filtered_Normalized'])
+        col1, col2, col3, col4 = st.tabs(['Filtered_leontief', 'Binary_matrix','Filtered_matrix_','Filtered_Normalized'])
         with col1:
             st.write(filtered_leontief)
             st.markdown("##### Threshold 적용 후 네트워크 행렬의 지표")
