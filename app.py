@@ -683,7 +683,7 @@ def main():
                     **delta_bn,
                     "undirected_binary_matrix(delta)":   win_UN_final_label
                     }
-                    
+
                     download_multiple_csvs_as_zip(
                         all_delta,
                         zip_name="delta 적용 전체 결과들(zip)"
@@ -890,6 +890,21 @@ def main():
             "threshold_bn_eigenvector_centrality": tbn_df_ev,
             "threshold_bn_hits": tbn_df_hi
                                     }
+            
+            # 모든 결과를 한 dict으로 합치기
+            all_threshold = {
+                "filtered_leontief(threshold)":        filtered_leontief,
+                **threshold_original,
+                "binary_matrix(threshold)":            binary_matrix_with_label,
+                **threshold_bn,
+                "filtered_matrix_X(threshold)":        filtered_matrix_X,
+                "filtered_normalized(threshold)":      filtered_normalized
+            }
+            # ZIP으로 한 번에 다운로드
+            download_multiple_csvs_as_zip(
+                all_threshold,
+                zip_name="threshold 적용 전체 결과들(zip)"
+            )
             donwload_data(filtered_leontief, 'filtered_leontief(threshold)')
             download_multiple_csvs_as_zip(threshold_original, zip_name="threshold 적용 네트워크의 지표들(zip)")
             donwload_data(binary_matrix_with_label, 'binary_matrix(threshold)')
