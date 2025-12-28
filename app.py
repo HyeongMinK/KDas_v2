@@ -33,6 +33,10 @@ def main():
 
     if "show_edited" not in st.session_state:
         st.session_state.show_edited = False
+
+    def _k(x):
+        return int(x) if x.isdigit() else x
+
     def find_string_values(df, first_idx):
         # 특정 구간의 데이터 선택
         selected_df = df.iloc[first_idx[0]:, first_idx[1]:]
@@ -134,26 +138,11 @@ def main():
 
     if 'df_editing' in st.session_state:
         st.header("DataFrame을 수정합니다.")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            new_code = st.text_input('새로 삽입할 산업의 code를 입력하세요')
-        with col2:
-            name = st.text_input('새로 삽입할 산업의 이름을 입력하세요')
-        with col3:
-            if st.button('산업 추가'):
-                result = insert_row_and_col(st.session_state['df_editing'], first_idx, st.session_state['mid_ID_idx'], new_code, name, number_of_label)
-                st.session_state['df_editing'], st.session_state['mid_ID_idx'] = result[0:2]
-                st.session_state['data_editing_log'] += (result[2] + '\n\n')
-                if new_code not in st.session_state.ids_simbol:
-                    st.session_state.ids_simbol[new_code] = []  # 새로운 리스트 생성
-                st.session_state.ids_simbol[new_code].append(name)  # 값 추가
-                st.session_state.show_edited = False
-        st.subheader("산업 재분배 (Batch or Manual)")
+        st.markdown("#### 자동 입력 처리 (엑셀 파일로 일괄 처리)")
         
         # =========================
         # Batch Processing (업로드 즉시 준비 -> 텍스트 미리보기 -> 적용 버튼)
         # =========================
-        st.markdown("###### 엑셀 파일로 일괄 처리")
         alpha_file = st.file_uploader("Alpha 값 엑셀/ZIP 파일 업로드", type=["xlsx", "xls", "zip"])
 
         if alpha_file:
@@ -179,23 +168,88 @@ def main():
 
             # --- 2단계: 텍스트 미리보기 출력 ---
             if st.session_state.get("batch_df_clean") is not None:
-                meta = st.session_state.get("batch_meta", {})
-                st.markdown("#### 일괄 적용 내역")
+                st.markdown("##### 일괄 적용 내역 요약")
+                df_prev = st.session_state["batch_df_clean"].copy()
+                df_prev["from"] = df_prev["from"].astype(str)
+                df_prev["to"]   = df_prev["to"].astype(str)
+                df_prev["to_name"] = df_prev["to_name"].astype(str).replace("nan", "").fillna("")
 
-                if meta.get("kind") == "zip":
-                    st.write(f"- 업로드: {meta.get('uploaded')}")
-                    st.write(f"- 매칭된 파일: {meta.get('matched_file')} ({meta.get('match_mode')})")
-                else:
-                    st.write(f"- 업로드: {meta.get('uploaded')}")
-                preview = st.session_state["batch_preview_lines"]
-                for i in range(0, len(preview), 3):
-                    st.markdown("**" + " | ".join(preview[i:i+3]) + "**")
+                # to -> from 순 정렬 ( _k는 위에서 정의/이동된 함수 사용 )
+                df_prev = df_prev.sort_values(by=["to", "from"], key=lambda s: s.map(_k))
+
+                # to별 그룹 출력 (그룹키는 to 코드로 유지)
+                for idx, (to_code, g) in enumerate(df_prev.groupby("to", sort=False), start=1):
+                    # ✅ 표시용 이름: 그룹 내 to_name 고유값
+                    names = [n for n in g["to_name"].dropna().unique().tolist() if n and n != "None"]
+                    if len(names) == 0:
+                        display_name = to_code
+                    elif len(names) == 1:
+                        display_name = names[0]
+                    else:
+                        display_name = f"{names[0]} 외 {len(names)-1}"
+
+                    st.markdown(f"**[{idx}: {display_name}]**")
+
+                    lines = [
+                        f"{r['from']} -> {r['to']} : {float(r['alpha'])*100:.4f}%"
+                        for _, r in g.iterrows()
+                    ]
+                    for i in range(0, len(lines), 5):
+                        st.write(" | ".join(lines[i:i+5]))
+
+
 
 
                 # --- 3단계: 적용 버튼 누르면 실제 업데이트 실행 ---
                 if st.button("일괄 적용"):
                     try:
                         batch_df = st.session_state["batch_df_clean"]
+
+                        df_curr = st.session_state["df_editing"]
+                        code_col_idx = first_idx[1] - number_of_label
+
+                        # -------------------------
+                        # [NEW] 1) to/to_name 기반 자동 산업 추가 단계
+                        # -------------------------
+                        # (to, to_name) 중복 제거해서 한 번만 추가 시도
+                        targets = batch_df[["to", "to_name"]].drop_duplicates()
+
+                        for _, t in targets.iterrows():
+                            new_code = str(t["to"])
+                            new_name = str(t["to_name"]) if str(t["to_name"]) not in ["nan", "None"] else ""
+
+                            # df에 해당 코드가 이미 있는지 확인
+                            exists = (df_curr.iloc[:, code_col_idx].astype(str) == new_code).any()
+                            if exists:
+                                # 이미 있으면 ids_simbol에만 이름 보관(원하면 중복 방지 가능)
+                                if new_code not in st.session_state.ids_simbol:
+                                    st.session_state.ids_simbol[new_code] = []
+                                if new_name and (new_name not in st.session_state.ids_simbol[new_code]):
+                                    st.session_state.ids_simbol[new_code].append(new_name)
+                                continue
+
+                            # 없으면 "산업 추가" 버튼과 동일한 로직 실행
+                            result = insert_row_and_col(
+                                df_curr,
+                                first_idx,
+                                st.session_state["mid_ID_idx"],
+                                new_code,
+                                new_name if new_name else f"NEW_{new_code}",
+                                number_of_label
+                            )
+
+                            df_curr, st.session_state["mid_ID_idx"] = result[0:2]
+                            st.session_state["data_editing_log"] += (result[2] + "\n\n")
+
+                            if new_code not in st.session_state.ids_simbol:
+                                st.session_state.ids_simbol[new_code] = []
+                            if new_name:
+                                st.session_state.ids_simbol[new_code].append(new_name)
+
+                        # 삽입 반영된 df를 다시 세션에 저장
+                        st.session_state["df_editing"] = df_curr
+                        df_curr = st.session_state["df_editing"]
+
                         grouped = batch_df.groupby("from")
 
                         df_curr = st.session_state["df_editing"]
@@ -244,20 +298,32 @@ def main():
 
                             df_curr.iloc[origin_row_idx, first_idx[1]:] = origin_row_data * remaining_ratio
                             df_curr.iloc[first_idx[0]:, origin_col_idx] = origin_col_data * remaining_ratio
-                            log_msg += f"[Batch Info] {origin_code} 잔여: {remaining_ratio*100:.4f}%\n"
+                            log_msg += f"\n[Batch Info] {origin_code} 잔여: {remaining_ratio*100:.4f}%\n\n"
 
                         st.session_state["df_editing"] = df_curr
                         st.session_state["data_editing_log"] += (log_msg + "\n")
                         st.session_state.show_edited = False
-
-                        st.success("일괄 처리 완료!")
                         st.rerun()
 
                     except Exception as e:
                         st.error(f"처리 중 오류 발생: {e}")
 
         # Manual Processing (Existing)
-        st.markdown("###### 수동 입력")
+        st.markdown("#### 수동 입력")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            new_code = st.text_input('새로 삽입할 산업의 code를 입력하세요')
+        with col2:
+            name = st.text_input('새로 삽입할 산업의 이름을 입력하세요')
+        with col3:
+            if st.button('산업 추가'):
+                result = insert_row_and_col(st.session_state['df_editing'], first_idx, st.session_state['mid_ID_idx'], new_code, name, number_of_label)
+                st.session_state['df_editing'], st.session_state['mid_ID_idx'] = result[0:2]
+                st.session_state['data_editing_log'] += (result[2] + '\n\n')
+                if new_code not in st.session_state.ids_simbol:
+                    st.session_state.ids_simbol[new_code] = []  # 새로운 리스트 생성
+                st.session_state.ids_simbol[new_code].append(name)  # 값 추가
+                st.session_state.show_edited = False
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             origin_code = st.text_input('from')

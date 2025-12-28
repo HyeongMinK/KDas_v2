@@ -11,36 +11,67 @@ import unicodedata
 def _nfc(s: str) -> str:
     return unicodedata.normalize('NFC', s)
 
+def _fix_zip_name(name: str) -> str:
+    """
+    zipfile이 cp437로 잘못 디코딩한 파일명을 복구 시도.
+    1) cp437 bytes로 되돌린 뒤
+    2) utf-8 / cp949 순으로 decode 시도
+    """
+    try:
+        raw = name.encode("cp437")
+    except Exception:
+        return name
+
+    for enc in ("utf-8", "cp949"):
+        try:
+            return raw.decode(enc)
+        except Exception:
+            pass
+
+    # 최후: cp949로 깨지더라도 replace
+    return raw.decode("cp949", errors="replace")
+
+
 def _pick_excel_from_zip(z: zipfile.ZipFile, original_filename_no_ext: str):
     """ZIP 내부에서 원본 파일명 기반 매칭 -> 실패 시 첫 번째 엑셀 fallback"""
-    file_list = z.namelist()
-    excel_paths = [
-        p for p in file_list
-        if p.endswith(('.xlsx', '.xls')) and not p.startswith('__MACOSX') and '/__MACOSX' not in p
-    ]
+
+    infos = []
+    for info in z.infolist():
+        raw = info.filename
+        fixed = _nfc(_fix_zip_name(raw)).replace("\\", "/")
+
+        # __MACOSX 제거 + 엑셀만
+        if fixed.startswith("__MACOSX") or "/__MACOSX/" in fixed:
+            continue
+        if not fixed.endswith((".xlsx", ".xls")):
+            continue
+
+        infos.append((info, fixed))
+
     # (표시용) clean name
     clean_names = []
-    path_by_clean = {}
-    for p in excel_paths:
-        clean = p.replace('\\', '/').split('/')[-1]
-        clean_no_ext = clean.rsplit('.', 1)[0]
+    info_by_clean = {}
+    for info, fixed in infos:
+        base = fixed.split("/")[-1]
+        clean_no_ext = base.rsplit(".", 1)[0]
         clean_names.append(clean_no_ext)
-        path_by_clean[clean_no_ext] = p
+        info_by_clean[clean_no_ext] = info   # ✅ ZipInfo 저장
 
     # 1) 자동 매칭
     norm_orig = _nfc(original_filename_no_ext)
     for clean in clean_names:
-        parts = [x for x in clean.split('_') if x]
+        parts = [x for x in clean.split("_") if x]
         parts = [_nfc(x) for x in parts]
         if parts and all(part in norm_orig for part in parts):
-            return clean, path_by_clean[clean], "matched"
+            return clean, info_by_clean[clean], "matched"
 
     # 2) fallback: 첫 번째 엑셀
     if clean_names:
         clean = clean_names[0]
-        return clean, path_by_clean[clean], "fallback_first"
+        return clean, info_by_clean[clean], "fallback_first"
 
     return None, None, "no_excel"
+
 
 
 def prepare_batch_preview(alpha_file, original_filename_no_ext: str):
@@ -60,28 +91,33 @@ def prepare_batch_preview(alpha_file, original_filename_no_ext: str):
     if alpha_file.name.endswith(".zip"):
         zip_bytes = io.BytesIO(alpha_file.getvalue())
         with zipfile.ZipFile(zip_bytes, 'r') as z:
-            matched_clean, matched_path, mode = _pick_excel_from_zip(z, original_filename_no_ext)
+            matched_clean, matched_info, mode = _pick_excel_from_zip(z, original_filename_no_ext)
             if mode == "no_excel":
                 raise ValueError("ZIP 내부에 엑셀 파일이 없습니다.")
 
             meta["matched_file"] = matched_clean
             meta["match_mode"] = mode
 
-            with z.open(matched_path) as f:
+            # ✅ 문자열 경로가 아니라 ZipInfo로 open
+            with z.open(matched_info) as f:
                 batch_df = pd.read_excel(f)
+
     else:
         meta["matched_file"] = alpha_file.name
         meta["match_mode"] = "no_match_needed"
         batch_df = pd.read_excel(alpha_file)
 
     # --- 검증/정리 ---
-    needed_cols = {"from", "to", "alpha"}
+    needed_cols = {"from", "to", "to_name", "alpha"}
     if not needed_cols.issubset(batch_df.columns):
         raise ValueError(f"엑셀 파일에 다음 컬럼이 포함되어야 합니다: {needed_cols}")
+
 
     df = batch_df.copy()
     df["from"] = df["from"].astype(str)
     df["to"] = df["to"].astype(str)
+    df["to_name"] = df["to_name"].astype(str)
+    df["to_name"] = df["to_name"].replace("nan", "").fillna("")
     df["alpha"] = pd.to_numeric(df["alpha"], errors="coerce")
 
     # alpha가 NaN인 행 제거
@@ -90,7 +126,8 @@ def prepare_batch_preview(alpha_file, original_filename_no_ext: str):
     # --- 2단계: 텍스트 미리보기 생성 ---
     preview_lines = []
     for _, r in df.iterrows():
-        preview_lines.append(f"{r['from']} -> {r['to']} : {float(r['alpha'])*100:.4f}%")
+        nm = r["to_name"] if r["to_name"] else "-"
+        preview_lines.append(f"{r['from']} -> {r['to']}({nm}) : {float(r['alpha'])*100:.4f}%")
 
     # from별 합/잔여
     summary_lines = []
