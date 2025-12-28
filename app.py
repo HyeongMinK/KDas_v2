@@ -4,6 +4,7 @@ import streamlit as st
 from functions import *
 import matplotlib.pyplot as plt
 import networkx as nx
+import re
 from networkx.exception import PowerIterationFailedConvergence
 
 ### Streamlit 구현
@@ -234,11 +235,37 @@ def main():
         st.session_state['added_value_denominator'] = pd.to_numeric(st.session_state['added_value_denominator'])
         st.session_state['added_value_denominator_replaced'] = st.session_state['added_value_denominator'].replace(0, np.finfo(float).eps)
 
+        # 2025-12-26 추가
+        st.session_state['v'] = (st.session_state['added_value_denominator'] / st.session_state['normalization_denominator_replaced'])
+
+        v_vec = st.session_state['v'].to_numpy()
+        V_matrix = np.diag(v_vec)
+        st.session_state['V'] = V_matrix
+
+        # 1) 두번째 행(= iloc[1])에서 '최종수요계' 찾기
+        header2 = edited_matrix_C.iloc[1].fillna("").astype(str).str.strip()
+
+        # 정확히 일치로 찾기
+        pos = np.where(header2.values == "최종수요계")[0]
+        if len(pos) == 0:
+            # 혹시 공백/표기가 다른 경우 대비(부분일치)
+            pos = np.where(header2.str.contains("최종수요", na=False).values)[0]
+
+        if len(pos) == 0:
+            raise ValueError("edited_matrix_C의 2번째 행에서 '최종수요계' 열을 못 찾았음")
+
+        col_pos = int(pos[0])  # '최종수요계' 열의 '위치(정수)'
+
+        # 2) 산업 행은 iloc[2:]부터 시작(라벨 2행 제거)
+        st.session_state['y'] = pd.to_numeric(edited_matrix_C.iloc[2:, col_pos], errors="coerce").to_numpy().reshape(-1, 1)
+
+
+
+
         
     if 'df_for_leontief' in st.session_state and st.session_state.show_edited:
-        st.session_state['df_for_leontief_without_label'] = st.session_state['df_for_leontief'].iloc[2:, 2:].copy()
         st.session_state['df_for_leontief_with_label'] = st.session_state['df_for_leontief'].copy()
-
+        st.session_state['df_for_leontief_without_label'] = st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].copy()
         st.session_state['df_for_r_without_label'] = st.session_state['df_for_r'].iloc[2:, 2:].copy()
         st.session_state['df_for_r_with_label'] = st.session_state['df_for_r'].copy()
         
@@ -323,11 +350,74 @@ def main():
         st.session_state['fl_bl'] = pd.concat([ids_col, fl_data, bl_data], axis=1)
 
         st.session_state['df_for_leontief_with_label']=st.session_state['df_for_leontief_with_label'].iloc[:-1, :-1]
+        st.session_state['df_for_leontief_without_label'] = st.session_state['df_for_leontief_with_label'].iloc[2:, 2:].copy()
+
+        # 2025-12-26 추가 (GDP 및 부가가치 유발 효과)
+        # L, y, V 준비
+        L = st.session_state['df_for_leontief_without_label'].apply(pd.to_numeric, errors='coerce').fillna(0).to_numpy()
+
+        y = np.asarray(st.session_state['y']).reshape(-1, 1)  # (84,1) 보장
+        y = y[:-1, :]  # 맨 마지막 1개 제거 -> (83,1)
+
+        V = st.session_state['V']
+        v = np.asarray(st.session_state['v'], dtype=float).reshape(1, -1)
+
+
+        # GDP 생성
+        x = L @ y
+        g = V @ x
+
+        # 부가가치 유발 효과
+        m_v = v @ L
+
+        # =========================
+        # [A] GDP(산업별 VA 유발액)
+        # =========================
+        base_df = st.session_state['df_for_leontief_with_label']
+
+        ids_col = base_df.iloc[1:, :2].reset_index(drop=True)  # 라벨은 그대로(첫 라벨행 포함된 구조 유지)
+
+        g_vec  = g.reshape(-1)
+        g_data = pd.concat(
+            [
+                pd.DataFrame(["GDP"], columns=["2"]),
+                pd.Series(g_vec).to_frame(name="2")
+            ],
+            axis=0
+        ).reset_index(drop=True)
+
+        st.session_state['gdp_by_industry'] = pd.concat([ids_col, g_data], axis=1)
+
+        st.session_state['GDP_total'] = float(g_vec.sum())
+        st.session_state['GDP_mean']  = float(g_vec.mean())
+
+
+
+        # =========================
+        # [B] 부가가치 유발효과(m_v)
+        # =========================
+        ids_col = base_df.iloc[1:, :2].reset_index(drop=True)
+
+        mv_vec  = m_v.reshape(-1)
+        mv_data = pd.concat(
+            [
+                pd.DataFrame(["부가가치유발효과"], columns=["2"]),
+                pd.Series(mv_vec).to_frame(name="2")
+            ],
+            axis=0
+        ).reset_index(drop=True)
+
+        st.session_state['va_multiplier_by_sector'] = pd.concat([ids_col, mv_data], axis=1)
+
+        st.session_state['m_v_total'] = float(mv_vec.sum())
+        st.session_state['m_v_mean']  = float(mv_vec.mean())
+
+
 
 
 
         st.subheader('Leontief 과정 matrices')
-        col1, col2, col3, col4,col5,col6, col7= st.tabs(['edited_df', 'normailization denominator', '투입계수행렬', 'leontief inverse','FL-BL','부가가치계수행렬','부가가치계벡터'])
+        col1, col2, col3, col4, col5, col6, col7, col8, col9= st.tabs(['edited_df', 'normailization denominator', '투입계수행렬', 'leontief inverse','FL-BL','GDP','부가가치유발효과','부가가치계수행렬','부가가치계벡터'])
         with col1:
             st.write(st.session_state['df_for_leontief'])
         with col2:
@@ -340,11 +430,19 @@ def main():
         with col5:
             st.write(st.session_state['fl_bl'])
         with col6:
-            st.write(st.session_state['df_for_r_with_label'])
+            st.write(st.session_state['gdp_by_industry'])
+            st.write("GDP_total (sum g):", st.session_state['GDP_total'])
+            st.write("GDP_mean (mean g):", st.session_state['GDP_mean'])
         with col7:
+            st.write(st.session_state['va_multiplier_by_sector'])
+            st.write("m_v_total (sum m_v):", st.session_state['m_v_total'])
+            st.write("m_v_mean (mean m_v):", st.session_state['m_v_mean'])
+        with col8:
+            st.write(st.session_state['df_for_r_with_label'])
+        with col9:
             st.write(st.session_state['added_value_denominator'])
 
-
+        st.subheader("레온티에프 역행렬을 통한 정합성 검증 내용")
         is_equal_to_one_row = np.isclose(leontief_with_sums[-1, :-1].mean(), 1)
         st.write(f"행(영향력계수) 합의 평균이 1과 동일 여부 {is_equal_to_one_row}")
         is_equal_to_one_row = np.isclose(leontief_with_sums[:-1, -1].mean(), 1)
@@ -389,6 +487,8 @@ def main():
             "투입계수행렬": st.session_state['df_normalized_with_label'],
             "leontief inverse": st.session_state['df_for_leontief_with_label'],
             "FL-BL": st.session_state['fl_bl'],
+            "GDP": st.session_state['gdp_by_industry'],
+            "부가가치유발효과": st.session_state['va_multiplier_by_sector'],
             "부가가치계수행렬": st.session_state['df_for_r_with_label'],
             "부가가치계벡터": st.session_state['added_value_denominator']
             }
@@ -397,40 +497,74 @@ def main():
             donwload_data(st.session_state['df_normalized_with_label'], '투입계수행렬')
             donwload_data(st.session_state['df_for_leontief_with_label'], 'leontief inverse')
             donwload_data(st.session_state['fl_bl'], 'FL-BL')
+            donwload_data(st.session_state['gdp_by_industry'], 'GDP')
+            donwload_data(st.session_state['va_multiplier_by_sector'], '부가가치유발효과')
             donwload_data(st.session_state['df_for_r_with_label'], '부가가치계수행렬')
             donwload_data(st.session_state['added_value_denominator'], '부가가치계벡터')
 
 
-        
         st.subheader("FL-BL Plot")
-        # 세션 상태에서 ids_simbol의 값들 가져오기 (리스트 형태로 변환)
-        ids_values = [item for sublist in st.session_state.ids_simbol.values() for item in sublist]
-        # 부문명칭 값이 ids_values에 포함된 경우와 그렇지 않은 경우 분리
-        highlight_df = st.session_state['fl_bl'][st.session_state['fl_bl'][1].isin(ids_values)]  # 포함된 경우
-        other_df = st.session_state['fl_bl'][~st.session_state['fl_bl'][1].isin(ids_values)]  # 포함되지 않은 경우
-        other_df =  other_df.iloc[1:,:]
 
-        # 플롯 생성
+        # -----------------------------
+        # 1) ids_values 만들기 + (중복 제거, 순서 유지)
+        # -----------------------------
+        ids_values = [item for sublist in st.session_state.ids_simbol.values() for item in sublist]
+
+        seen = set()
+        ids_unique = []
+        for x in ids_values:
+            if x not in seen:
+                seen.add(x)
+                ids_unique.append(x)
+
+        # -----------------------------
+        # 2) 토글을 "한 행"에 전부 배치 (각 아이템별 토글)
+        #    - 기본값 True (전부 ON)
+        # -----------------------------
+        if len(ids_unique) > 0:
+            cols = st.columns(len(ids_unique))  # ✅ 한 줄에 전부
+            selected_ids = []
+            for i, name in enumerate(ids_unique):
+                # key는 안전하게(특수문자 제거) + i 붙여서 중복 방지
+                safe = re.sub(r"[^0-9a-zA-Z가-힣_]", "_", str(name))
+                key = f"hl_{i}_{safe}"
+
+                with cols[i]:
+                    if st.toggle(str(name), value=True, key=key):
+                        selected_ids.append(name)
+        else:
+            selected_ids = []
+
+        # -----------------------------
+        # 3) DF 준비 (첫 행 제거는 통일)
+        # -----------------------------
+        df = st.session_state['fl_bl'].copy()
+        df = df.iloc[1:, :]
+
+        highlight_df = df[df[1].isin(selected_ids)]
+
+        # -----------------------------
+        # 4) Plot: 전체는 other 스타일로 그리고,
+        #         토글 ON인 애들만 빨간 + 라벨 overlay
+        # -----------------------------
         fig, ax = plt.subplots(figsize=(12, 10))
 
-        # 다른 점들
-        ax.scatter(other_df['2'], other_df['3'], facecolors='none', edgecolors='black', s=100)
+        # 전체 기본 점 (other 스타일)
+        ax.scatter(df['2'], df['3'], facecolors='none', edgecolors='black', s=100)
 
-        # 강조 점들
-        ax.scatter(highlight_df['2'], highlight_df['3'], color='red', s=150)
+        # 선택된 애들만 강조 + 라벨
+        if not highlight_df.empty:
+            ax.scatter(highlight_df['2'], highlight_df['3'], color='red', s=150)
+            for _, row in highlight_df.iterrows():
+                ax.text(row['2'], row['3'], row[1], color='black', fontsize=16, ha='right')
 
-        # 강조 점 레이블 추가
-        for i, row in highlight_df.iterrows():
-            ax.text(row['2'], row['3'], row[1], color='black', fontsize=16, ha='right')
-
-        # 라벨 및 기준선 추가
         ax.set_xlabel('FL', fontsize=14)
         ax.set_ylabel('BL', fontsize=14)
         ax.axhline(1, color='black', linestyle='--', linewidth=1)
         ax.axvline(1, color='black', linestyle='--', linewidth=1)
 
-        # Streamlit에서 그래프 표시
         st.pyplot(fig)
+
 
         # 사이드바 expander 에 다운로드 버튼 추가
         with st.sidebar.expander("Plot 다운로드"):
@@ -1006,7 +1140,7 @@ def main():
             st.write("아직 저장된 결과가 없습니다. 먼저 분석을 실행하세요.")
     st.sidebar.header('수정내역')
     with st.sidebar.expander('수정내역 보기'):
-        st.write(st.session_state['data_editing_log'])
+        st.text(st.session_state['data_editing_log'])
 
 if __name__ == "__main__":
     main()
