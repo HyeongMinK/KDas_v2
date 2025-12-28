@@ -100,12 +100,18 @@ def prepare_batch_preview(alpha_file, original_filename_no_ext: str):
 
             # ✅ 문자열 경로가 아니라 ZipInfo로 open
             with z.open(matched_info) as f:
-                batch_df = pd.read_excel(f)
+                batch_df = pd.read_excel(
+                f,
+                dtype=str  # <─ 전체를 문자열로 받음 (숫자로 오인 금지)
+            )
 
     else:
         meta["matched_file"] = alpha_file.name
         meta["match_mode"] = "no_match_needed"
-        batch_df = pd.read_excel(alpha_file)
+        batch_df = pd.read_excel(
+            alpha_file,
+            dtype=str  # <─ 여기서도 동일
+        )
 
     # --- 검증/정리 ---
     needed_cols = {"from", "to", "to_name", "alpha"}

@@ -532,8 +532,8 @@ def main():
         # L, y, V 준비
         L = st.session_state['df_for_leontief_without_label'].apply(pd.to_numeric, errors='coerce').fillna(0).to_numpy()
 
-        y = np.asarray(st.session_state['y']).reshape(-1, 1)  # (84,1) 보장
-        y = y[:-1, :]  # 맨 마지막 1개 제거 -> (83,1)
+        y = np.asarray(st.session_state['y']).reshape(-1, 1)
+        y = y[:-1, :] 
 
         V = st.session_state['V']
         v = np.asarray(st.session_state['v'], dtype=float).reshape(1, -1)
