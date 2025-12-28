@@ -5,6 +5,103 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import io
 import zipfile
+import unicodedata
+
+### 자동화 관련 함수 선언
+def _nfc(s: str) -> str:
+    return unicodedata.normalize('NFC', s)
+
+def _pick_excel_from_zip(z: zipfile.ZipFile, original_filename_no_ext: str):
+    """ZIP 내부에서 원본 파일명 기반 매칭 -> 실패 시 첫 번째 엑셀 fallback"""
+    file_list = z.namelist()
+    excel_paths = [
+        p for p in file_list
+        if p.endswith(('.xlsx', '.xls')) and not p.startswith('__MACOSX') and '/__MACOSX' not in p
+    ]
+    # (표시용) clean name
+    clean_names = []
+    path_by_clean = {}
+    for p in excel_paths:
+        clean = p.replace('\\', '/').split('/')[-1]
+        clean_no_ext = clean.rsplit('.', 1)[0]
+        clean_names.append(clean_no_ext)
+        path_by_clean[clean_no_ext] = p
+
+    # 1) 자동 매칭
+    norm_orig = _nfc(original_filename_no_ext)
+    for clean in clean_names:
+        parts = [x for x in clean.split('_') if x]
+        parts = [_nfc(x) for x in parts]
+        if parts and all(part in norm_orig for part in parts):
+            return clean, path_by_clean[clean], "matched"
+
+    # 2) fallback: 첫 번째 엑셀
+    if clean_names:
+        clean = clean_names[0]
+        return clean, path_by_clean[clean], "fallback_first"
+
+    return None, None, "no_excel"
+
+
+def prepare_batch_preview(alpha_file, original_filename_no_ext: str):
+    """
+    1) ZIP이면 매칭 후 batch_df 로드 / 엑셀이면 바로 로드
+    2) 텍스트 미리보기 라인 생성
+    return: (batch_df, meta, preview_lines, summary_lines)
+    """
+    meta = {
+        "uploaded": alpha_file.name,
+        "kind": "zip" if alpha_file.name.endswith(".zip") else "excel",
+        "matched_file": None,
+        "match_mode": None
+    }
+
+    # --- 1단계: 파일 확보 (업로드 즉시 실행) ---
+    if alpha_file.name.endswith(".zip"):
+        zip_bytes = io.BytesIO(alpha_file.getvalue())
+        with zipfile.ZipFile(zip_bytes, 'r') as z:
+            matched_clean, matched_path, mode = _pick_excel_from_zip(z, original_filename_no_ext)
+            if mode == "no_excel":
+                raise ValueError("ZIP 내부에 엑셀 파일이 없습니다.")
+
+            meta["matched_file"] = matched_clean
+            meta["match_mode"] = mode
+
+            with z.open(matched_path) as f:
+                batch_df = pd.read_excel(f)
+    else:
+        meta["matched_file"] = alpha_file.name
+        meta["match_mode"] = "no_match_needed"
+        batch_df = pd.read_excel(alpha_file)
+
+    # --- 검증/정리 ---
+    needed_cols = {"from", "to", "alpha"}
+    if not needed_cols.issubset(batch_df.columns):
+        raise ValueError(f"엑셀 파일에 다음 컬럼이 포함되어야 합니다: {needed_cols}")
+
+    df = batch_df.copy()
+    df["from"] = df["from"].astype(str)
+    df["to"] = df["to"].astype(str)
+    df["alpha"] = pd.to_numeric(df["alpha"], errors="coerce")
+
+    # alpha가 NaN인 행 제거
+    df = df.dropna(subset=["alpha"])
+
+    # --- 2단계: 텍스트 미리보기 생성 ---
+    preview_lines = []
+    for _, r in df.iterrows():
+        preview_lines.append(f"{r['from']} -> {r['to']} : {float(r['alpha'])*100:.4f}%")
+
+    # from별 합/잔여
+    summary_lines = []
+    grouped = df.groupby("from")["alpha"].sum()
+    for origin_code, total_alpha in grouped.items():
+        remaining = 1.0 - float(total_alpha)
+        summary_lines.append(
+            f"[from={origin_code}] 이동합={float(total_alpha)*100:.4f}%, 잔여={remaining*100:.4f}%"
+        )
+
+    return df, meta, preview_lines, summary_lines
 
 ### 사용자 정의 함수 선언
 def make_binary_matrix(matrix, threshold):

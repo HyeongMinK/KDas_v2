@@ -148,6 +148,116 @@ def main():
                     st.session_state.ids_simbol[new_code] = []  # 새로운 리스트 생성
                 st.session_state.ids_simbol[new_code].append(name)  # 값 추가
                 st.session_state.show_edited = False
+        st.subheader("산업 재분배 (Batch or Manual)")
+        
+        # =========================
+        # Batch Processing (업로드 즉시 준비 -> 텍스트 미리보기 -> 적용 버튼)
+        # =========================
+        st.markdown("###### 엑셀 파일로 일괄 처리")
+        alpha_file = st.file_uploader("Alpha 값 엑셀/ZIP 파일 업로드", type=["xlsx", "xls", "zip"])
+
+        if alpha_file:
+            # 원본 업로드 파일명(확장자 제외) - ZIP 매칭에만 사용
+            original_filename_no_ext = st.session_state["uploaded_file"].name.rsplit(".", 1)[0]
+
+            # 업로드 파일 변경 감지 (rerun에서도 중복 준비 방지)
+            alpha_key = (alpha_file.name, len(alpha_file.getvalue()))
+            if st.session_state.get("alpha_key") != alpha_key:
+                st.session_state["alpha_key"] = alpha_key
+
+                # 업로드 즉시 1단계+2단계 자동 수행
+                try:
+                    batch_df_clean, meta, preview_lines, summary_lines = prepare_batch_preview(
+                        alpha_file, original_filename_no_ext
+                    )
+                    st.session_state["batch_df_clean"] = batch_df_clean
+                    st.session_state["batch_meta"] = meta
+                    st.session_state["batch_preview_lines"] = preview_lines
+                except Exception as e:
+                    st.session_state["batch_df_clean"] = None
+                    st.error(f"미리보기 준비 중 오류: {e}")
+
+            # --- 2단계: 텍스트 미리보기 출력 ---
+            if st.session_state.get("batch_df_clean") is not None:
+                meta = st.session_state.get("batch_meta", {})
+                st.markdown("#### 일괄 적용 내역")
+
+                if meta.get("kind") == "zip":
+                    st.write(f"- 업로드: {meta.get('uploaded')}")
+                    st.write(f"- 매칭된 파일: {meta.get('matched_file')} ({meta.get('match_mode')})")
+                else:
+                    st.write(f"- 업로드: {meta.get('uploaded')}")
+                preview = st.session_state["batch_preview_lines"]
+                for i in range(0, len(preview), 3):
+                    st.markdown("**" + " | ".join(preview[i:i+3]) + "**")
+
+
+                # --- 3단계: 적용 버튼 누르면 실제 업데이트 실행 ---
+                if st.button("일괄 적용"):
+                    try:
+                        batch_df = st.session_state["batch_df_clean"]
+                        grouped = batch_df.groupby("from")
+
+                        df_curr = st.session_state["df_editing"]
+
+                        # ✅ 기존 로직 유지 + number_of_label 반영
+                        code_col_idx = first_idx[1] - number_of_label
+
+                        log_msg = ""
+                        for origin_code, group in grouped:
+                            origin_indices = df_curr.index[df_curr.iloc[:, code_col_idx] == origin_code].tolist()
+                            if len(origin_indices) != 1:
+                                log_msg += f"Error: Origin Code '{origin_code}' 유일하지 않거나 없음. 스킵\n"
+                                continue
+
+                            origin_row_idx = origin_indices[0]
+                            origin_col_idx = origin_row_idx - first_idx[0] + first_idx[1]
+
+                            # snapshot
+                            origin_row_data = df_curr.iloc[origin_row_idx, first_idx[1]:].copy()
+                            origin_col_data = df_curr.iloc[first_idx[0]:, origin_col_idx].copy()
+
+                            total_alpha = float(group["alpha"].sum())
+
+                            # 타겟들에 동시 가산
+                            for _, r in group.iterrows():
+                                target_code = r["to"]
+                                ratio = float(r["alpha"])
+
+                                target_indices = df_curr.index[df_curr.iloc[:, code_col_idx] == target_code].tolist()
+                                if len(target_indices) != 1:
+                                    log_msg += f"Error: Target Code '{target_code}' 유일하지 않거나 없음. ({origin_code}->{target_code} 스킵)\n"
+                                    continue
+
+                                target_row_idx = target_indices[0]
+                                target_col_idx = target_row_idx - first_idx[0] + first_idx[1]
+
+                                df_curr.iloc[target_row_idx, first_idx[1]:] += origin_row_data * ratio
+                                df_curr.iloc[first_idx[0]:, target_col_idx] += origin_col_data * ratio
+
+                                log_msg += f"[Batch] {origin_code} -> {target_code}: {ratio*100:.2f}% 이동\n"
+
+                            # origin 잔여 반영
+                            remaining_ratio = 1.0 - total_alpha
+                            if abs(remaining_ratio) < 1e-9:
+                                remaining_ratio = 0.0
+
+                            df_curr.iloc[origin_row_idx, first_idx[1]:] = origin_row_data * remaining_ratio
+                            df_curr.iloc[first_idx[0]:, origin_col_idx] = origin_col_data * remaining_ratio
+                            log_msg += f"[Batch Info] {origin_code} 잔여: {remaining_ratio*100:.4f}%\n"
+
+                        st.session_state["df_editing"] = df_curr
+                        st.session_state["data_editing_log"] += (log_msg + "\n")
+                        st.session_state.show_edited = False
+
+                        st.success("일괄 처리 완료!")
+                        st.rerun()
+
+                    except Exception as e:
+                        st.error(f"처리 중 오류 발생: {e}")
+
+        # Manual Processing (Existing)
+        st.markdown("###### 수동 입력")
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             origin_code = st.text_input('from')
