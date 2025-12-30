@@ -222,77 +222,27 @@ def calculate_network_centralities(G_bn, df_label, use_weight=False):
     hi_ah_mean = df_hi["HITS Authorities"].mean()
     hi_ah_std = df_hi["HITS Authorities"].std()
 
+    # Structural Hole Metrics (Constraint & Efficiency)
+    constraints, efficiencies = calculate_kim_metrics(G_bn, weight=weight_arg)
+    df_kim = df_label.iloc[2:, :2].copy()
+    df_kim["Constraint"] = pd.Series(constraints).sort_index().values.reshape(-1, 1)
+    df_kim["Efficiency"] = pd.Series(efficiencies).sort_index().values.reshape(-1, 1)
+
+    # 평균(Mean) 및 표준편차(Std) 계산
+    kim_const_mean = df_kim["Constraint"].mean()
+    kim_const_std = df_kim["Constraint"].std()
+    kim_eff_mean = df_kim["Efficiency"].mean()
+    kim_eff_std = df_kim["Efficiency"].std()
+
     return (
-        df_degree, df_bc, df_cc, df_ev, df_hi,
+        df_degree, df_bc, df_cc, df_ev, df_hi, df_kim,  # df_kim 추가
         gd_in_mean, gd_in_std, gd_out_mean, gd_out_std,
         bc_mean, bc_std,
         cc_in_mean, cc_in_std, cc_out_mean, cc_out_std,
         ev_in_mean, ev_in_std, ev_out_mean, ev_out_std,
-        hi_hub_mean, hi_hub_std, hi_ah_mean, hi_ah_std
+        hi_hub_mean, hi_hub_std, hi_ah_mean, hi_ah_std,
+        kim_const_mean, kim_const_std, kim_eff_mean, kim_eff_std  # 통계치 4개 추가
     )
-
-
-# 임계 값을 0-1까지로, 25%로 x축을 한정해서 시각화, 최대 변화율 지점의 x축 값 찾기
-@st.cache_data
-def threshold_count(matrix):
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import streamlit as st
-
-    L = matrix
-    element_counts = []
-    element_ratios = []
-
-    N = L.shape[0]
-    total_elements = N**2 - N  # 대각선 제외한 전체 원소 수
-
-    # 임계값 생성
-    threshold_values = np.linspace(0, 1, 1000)[:250]
-
-    for threshold in threshold_values:
-        thresholded_matrix = filter_matrix(L, threshold)
-        thresholded_matrix = thresholded_matrix.copy().to_numpy()
-        np.fill_diagonal(thresholded_matrix, 0)
-
-        count = (thresholded_matrix >= threshold).sum().sum()
-        ratio = count / total_elements
-
-        element_counts.append(count)
-        element_ratios.append(ratio)
-
-    # 최대 변화율(절대값) 찾기 (ratio 기준)
-    max_change = 0
-    max_change_index = 0
-    for i in range(1, len(element_ratios)):
-        change = abs(element_ratios[i - 1] - element_ratios[i])
-        if change > max_change:
-            max_change = change
-            max_change_index = i
-
-    max_change_threshold = threshold_values[max_change_index]
-
-    # 그래프 그리기 (이중 y축)
-    fig, ax1 = plt.subplots()
-
-    color1 = 'tab:blue'
-    ax1.set_xlabel('Threshold Value')
-    ax1.set_ylabel('Count (Number of Elements ≥ Threshold)', color=color1)
-    ax1.plot(threshold_values, element_counts, color=color1, label='Count')
-    ax1.tick_params(axis='y', labelcolor=color1)
-
-    ax2 = ax1.twinx()  # 두 번째 y축 생성
-    color2 = 'tab:red'
-    ax2.set_ylabel('Ratio (Count / (N² - N))', color=color2)
-    ax2.plot(threshold_values, element_ratios, color=color2, linestyle='--', label='Ratio')
-    ax2.tick_params(axis='y', labelcolor=color2)
-
-    fig.tight_layout()
-    st.pyplot(fig)
-    st.write(f'생존율 급감 구간의 임계 값 : {max_change_threshold:.4f}')
-
-    return plt.show()
-
-
 
 @st.cache_data()
 def get_submatrix_withlabel(df, start_row, start_col, end_row, end_col, first_index_of_df, numberoflabel = 2):
@@ -575,3 +525,254 @@ def create_undirected_network(BN):
     """
     UN = ((BN + BN.T) > 0).astype(int)
     return UN
+
+@st.cache_data()
+def threshold_count(matrix):
+    """
+    최적의 Threshold를 찾기 위해 두 가지 방식을 동시에 수행하고 비교합니다.
+    Method 2: 변화율의 안정화 시점 탐색 (Derivative Convergence)
+    Method 2-1: 원점(0,0)에서의 거리 최소화 (Distance Minimization)
+    """
+    # -------------------------------------------------------------------------
+    # 0. 데이터 준비
+    # -------------------------------------------------------------------------
+    if hasattr(matrix, 'to_numpy'):
+        mat_data = matrix.to_numpy()
+    else:
+        mat_data = np.array(matrix)
+        
+    mat_data = mat_data.copy()
+    np.fill_diagonal(mat_data, 0) # 대각 성분 제외
+    
+    N = mat_data.shape[0]
+    total_elements = N**2 - N
+    
+    # x축 설정: 0부터 최대값까지 delta 간격
+    delta = 0.01
+    max_val = np.max(mat_data)
+    x_values = np.arange(0, max_val + delta, delta)
+    
+    # -------------------------------------------------------------------------
+    # 1. y(t) 계산: 생존율 (Survival Ratio)
+    # -------------------------------------------------------------------------
+    y_list = []
+    for x in x_values:
+        count = (mat_data >= x).sum()
+        ratio = count / total_elements
+        y_list.append(ratio)
+    y = np.array(y_list)
+
+    # -------------------------------------------------------------------------
+    # [Method 2] 변화율(w) 기반 탐색 (User's Logic)
+    # -------------------------------------------------------------------------
+    # z(t) = {y(t) - y(t-1)} / delta  (음수, 기울기)
+    if len(y) > 1:
+        z = (y[1:] - y[:-1]) / delta
+    else:
+        z = np.zeros(len(y))
+
+    # w(t) = 2계 도함수 근사 (곡률)
+    # w(t) = |z(t) - z(t-1)| / delta (가속도의 크기) 
+    w_list = []
+    w_x_values = []
+    # z는 x[1]부터 시작하므로, w는 x[2]부터 시작
+    for i in range(1, len(z)):
+        # 가속도(곡률)의 크기
+        val_w = abs(z[i] - z[i-1]) / delta 
+        w_list.append(val_w)
+        if i+1 < len(x_values):
+            w_x_values.append(x_values[i+1])
+    w = np.array(w_list)
+    w_x_values = np.array(w_x_values)
+    
+    # Convergence Check: w(t-1) - w(t) <= epsilon
+    # 곡률이 급격히 줄어들다가 안정화되는(평평해지는) 첫 지점 찾기
+    epsilon = 0.01
+    opt_idx_method2 = 0
+    found_method2 = False
+    
+    # w 배열 인덱스 k는 x_values[k+2]에 해당
+    for k in range(1, len(w)):
+        w_prev = w[k-1]
+        w_curr = w[k]
+        
+        # 감소하던 곡률의 변화량이 epsilon보다 작아지는 순간 (안정화)
+        # 단, 초반 노이즈 방지를 위해 x가 어느정도 진행된 후(k>3) 판단
+        if k > 3 and (w_prev - w_curr) <= epsilon:
+            opt_idx_method2 = k + 2 # x index 보정
+            found_method2 = True
+            break
+            
+    if not found_method2 and len(x_values) > 0:
+        opt_idx_method2 = len(x_values) - 1 # 못 찾으면 끝점
+        
+    threshold_method2 = x_values[opt_idx_method2] if len(x_values) > opt_idx_method2 else 0
+
+    # -------------------------------------------------------------------------
+    # [Method 2-1] 원점 거리 최소화 (Distance Minimization)
+    # Target: Min( x^2 + y(x)^2 )
+
+    
+    dist_sq = x_values**2 + y**2
+    opt_idx_dist = np.argmin(dist_sq)
+    threshold_dist = x_values[opt_idx_dist]
+    min_y = y[opt_idx_dist] if len(y) > opt_idx_dist else 0
+
+    # -------------------------------------------------------------------------
+    # 시각화 (Dual Axis)
+    # -------------------------------------------------------------------------
+    fig, ax1 = plt.subplots(figsize=(10, 7))
+
+    # [왼쪽 축] y(x) Curve
+    color1 = 'tab:blue'
+    ax1.set_xlabel('Threshold (x)')
+    ax1.set_ylabel('Survival Ratio (y)', color=color1, fontweight='bold')
+    ax1.plot(x_values, y, color=color1, label='y: Survival Ratio', linewidth=2)
+    ax1.tick_params(axis='y', labelcolor=color1)
+    ax1.grid(True, alpha=0.3)
+    
+    # [오른쪽 축] w(t) Curve (추가됨)
+    if len(w) > 0:
+        ax2 = ax1.twinx()
+        color2 = 'tab:orange'
+        ax2.set_ylabel('Slope Change Rate (w)', color=color2, fontweight='bold')
+        # w(t)는 보통 초반에 매우 크고 뒤로 갈수록 작아지므로, 잘 보이게 투명도/스타일 조절
+        ax2.plot(w_x_values, w, color=color2, linestyle='--', alpha=0.6, label='w: Slope Change Rate')
+        ax2.tick_params(axis='y', labelcolor=color2)
+        
+        # w(t) 그래프가 너무 위로 솟으면 보기 힘들 수 있으므로 범위 제한 (선택사항)
+        # ax2.set_ylim(0, np.percentile(w, 95) * 1.5) # 상위 5% 이상 값은 잘라내서 확대 효과
+
+    # [시각적 보조 1] 등거리 곡선 (Iso-distance)
+    r_best = np.sqrt(threshold_dist**2 + min_y**2)
+    theta = np.linspace(0, np.pi/2, 200)
+    arc_x = r_best * np.cos(theta)
+    arc_y = r_best * np.sin(theta)
+    
+    max_x_plot = max(x_values) if len(x_values) > 0 else 1
+    mask = (arc_x <= max_x_plot * 1.1) & (arc_y <= 1.1)
+    ax1.plot(arc_x[mask], arc_y[mask], 'g:', linewidth=2, label='Min-Distance Horizon')
+
+    # [시각적 보조 2] Method 2 (회색 선)
+    ax1.axvline(x=threshold_method2, color='gray', linestyle='-.', alpha=0.8,
+                label=f'Method 2 (Stable w): {threshold_method2:.4f}')
+
+    # [시각적 보조 3] Method 2-1 (빨간 점)
+    ax1.plot(threshold_dist, min_y, 'ro', markersize=10, zorder=5,
+             label=f'Method 2-1 (Distance): {threshold_dist:.4f}')
+    
+    # 범례 합치기 (ax1 + ax2)
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    if len(w) > 0:
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
+    else:
+        ax1.legend(loc='upper right')
+
+    plt.title('Threshold Optimization: Ratio(y) vs Change Rate(w)')
+    fig.tight_layout()
+    st.pyplot(fig)
+    
+    # -------------------------------------------------------------------------
+    # 사용자 선택 UI
+    # -------------------------------------------------------------------------
+    st.markdown(f"""
+    **최적 임계값 도출 결과**
+    - **Method 2 (변화율 안정화)**: `{threshold_method2:.4f}` (곡률 변화가 $\epsilon$ 이하로 떨어지는 지점)
+    - **Method 2-1 (원점 거리 최소화)**: `{threshold_dist:.4f}` (그래프가 원점에 가장 가까운 지점)
+    
+    💡 **추천:** **Method 2-1 (Distance)** 방식이 노이즈에 강하고, 데이터의 "무릎(Knee)" 구간을 기하학적으로 가장 잘 찾아냅니다.
+    """)
+    
+    # 사용자가 선택할 수 있도록 하거나, 추천값(Distance) 반환
+    return threshold_dist
+
+def calculate_kim_metrics(G, weight='weight'):
+    """
+    Kim (2021) 방식의 Constraint와 Efficiency를 계산하여 딕셔너리로 반환
+    Return: (constraints_dict, efficiencies_dict)
+    """
+    # 1. Constraint (Burt's constraint)
+    # 가중치가 있으면 생산유발계수 등을 반영
+    constraints = nx.constraint(G, weight=weight)
+    
+    # 2. Efficiency (Kim's redundancy-based)
+    efficiencies = {}
+    nodes = list(G.nodes())
+    
+    # 효율성 계산을 위한 사전 계산 (속도 최적화)
+    # 양방향 거래량(volume) 계산 헬퍼
+    def get_vol(u, v):
+        if not G.has_edge(u, v): return 0.0
+        return G[u][v].get(weight, 1.0) if weight else 1.0
+
+    def get_bi_vol(u, v):
+        return get_vol(u, v) + get_vol(v, u)
+
+    node_total_volumes = {} # 분모: (In + Out sum)
+    node_max_volumes = {}   # 분모: Max connection strength
+    
+    for n in nodes:
+        # Total Volume (In + Out)
+        vol_in = G.in_degree(n, weight=weight)
+        vol_out = G.out_degree(n, weight=weight)
+        node_total_volumes[n] = vol_in + vol_out
+        
+        # Max Volume with any partner
+        partners = set(G.predecessors(n)) | set(G.successors(n))
+        max_vol = 0.0
+        for p in partners:
+            vol = get_bi_vol(n, p)
+            if vol > max_vol:
+                max_vol = vol
+        node_max_volumes[n] = max_vol
+
+    # 개별 노드 효율성 계산
+    for i in nodes:
+        partners_i = list(set(G.predecessors(i)) | set(G.successors(i)))
+        Ni = len(partners_i)
+        
+        if Ni == 0:
+            efficiencies[i] = 0.0
+            continue
+            
+        sum_Rij = 0.0
+        for j in partners_i:
+            # j와 i를 제외한 제3자(q) 탐색 (Redundancy check)
+            potential_qs = [q for q in partners_i if q != j and q != i]
+            
+            R_ij = 0.0
+            for q in potential_qs:
+                # rho_iq: i의 전체 거래 중 q와의 비중
+                vol_iq = get_bi_vol(i, q)
+                denom_i = node_total_volumes.get(i, 0)
+                rho_iq = vol_iq / denom_i if denom_i > 1e-9 else 0.0
+                
+                # tau_jq: j의 최대 거래 대비 q와의 강도
+                vol_jq = get_bi_vol(j, q)
+                max_vol_j = node_max_volumes.get(j, 0)
+                tau_jq = vol_jq / max_vol_j if max_vol_j > 1e-9 else 0.0
+                
+                R_ij += (rho_iq * tau_jq)
+            sum_Rij += R_ij
+        
+        # Kim's Efficiency Formula: epsilon = T_i / N_i where T_i = N_i - sum(R_ij)
+        Ti = Ni - sum_Rij
+        efficiencies[i] = Ti / Ni if Ni > 0 else 0.0
+        
+    return constraints, efficiencies
+
+def calculate_standard_metrics(G_directed, weight='weight'):
+    """Burt 표준 방식 (Efficiency = Effective Size / Out-Degree)"""
+    std_constraints = nx.constraint(G_directed, weight=weight)
+    effective_sizes = nx.effective_size(G_directed, weight=weight)
+    
+    std_efficiencies = {}
+    for n, eff_size in effective_sizes.items():
+        degree = G_directed.out_degree(n) # Standard Burt uses Out-degree for ego network size
+        if degree > 0:
+            std_efficiencies[n] = eff_size / degree
+        else:
+            std_efficiencies[n] = 0.0
+            
+    return std_constraints, std_efficiencies
