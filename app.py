@@ -1005,14 +1005,16 @@ def main():
                     "delta_original_betweenness_centrality": n_df_bc,
                     "delta_original_closeness_centrality": n_df_cc,
                     "delta_original_eigenvector_centrality": n_df_ev,
-                    "delta_original_hits": n_df_hi
+                    "delta_original_hits": n_df_hi,
+                    "delta_original_constraints&efficiencies": n_df_kim
                                             }
                     delta_bn = {
                     "delta_bn_degree_centrality": bn_df_degree,
                     "delta_bn_betweenness_centrality": bn_df_bc,
                     "delta_bn_closeness_centrality": bn_df_cc,
                     "delta_bn_eigenvector_centrality": bn_df_ev,
-                    "delta_bn_hits": bn_df_hi
+                    "delta_bn_hits": bn_df_hi,
+                    "delta_bn_constraints&efficiencies": bn_df_kim
                                             }
                     
                     all_delta = {
@@ -1242,14 +1244,15 @@ def main():
             "threshold_original_betweenness_centrality": tn_df_bc,
             "threshold_original_closeness_centrality": tn_df_cc,
             "threshold_original_eigenvector_centrality": tn_df_ev,
-            "threshold_original_hits": tn_df_hi
+            "threshold_original_hits": tn_df_hi,
+            "threshold_original_constraints&efficiencies": tn_df_kim
                                     }
             threshold_bn = {
             "threshold_bn_degree_centrality": tbn_df_degree,
             "threshold_bn_betweenness_centrality": tbn_df_bc,
             "threshold_bn_closeness_centrality": tbn_df_cc,
             "threshold_bn_eigenvector_centrality": tbn_df_ev,
-            "threshold_bn_hits": tbn_df_hi
+            "threshold_bn_constraints&efficiencies": tbn_df_kim
                                     }
             
             # 모든 결과를 한 dict으로 합치기
