@@ -1252,6 +1252,7 @@ def main():
             "threshold_bn_betweenness_centrality": tbn_df_bc,
             "threshold_bn_closeness_centrality": tbn_df_cc,
             "threshold_bn_eigenvector_centrality": tbn_df_ev,
+            "threshold_bn_hits": tbn_df_hi,
             "threshold_bn_constraints&efficiencies": tbn_df_kim
                                     }
             
