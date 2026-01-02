@@ -546,7 +546,7 @@ def main():
         # 부가가치 유발 효과
         m_v = v @ L
 
-        st.write(v)
+        st.write(st.session_state['V'])
 
         # =========================
         # [A] GDP(산업별 VA 유발액)
