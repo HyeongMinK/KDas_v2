@@ -585,7 +585,7 @@ def main():
 
 
         st.subheader('Leontief 과정 matrices')
-        col1, col2, col3, col4, col5, col6, col7, col8, col9= st.tabs(['edited_df', 'normailization denominator', '투입계수행렬', 'leontief inverse','FL-BL','GDP','부가가치유발효과','부가가치계수행렬','부가가치계벡터'])
+        col1, col2, col3, col4, col5, col6, col7, col8, col9= st.tabs(['edited_df', 'normailization denominator', '투입계수행렬', 'leontief inverse','FL-BL','GDP','부가가치유발효과(국내)','부가가치계수행렬','부가가치계벡터'])
         with col1:
             st.write(st.session_state['df_for_leontief'])
         with col2:
