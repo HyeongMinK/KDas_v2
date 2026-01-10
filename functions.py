@@ -6,6 +6,8 @@ import networkx as nx
 import io
 import zipfile
 import unicodedata
+from copy import deepcopy
+from typing import Any, Dict, List, Optional, Tuple
 
 ### 자동화 관련 함수 선언
 def _nfc(s: str) -> str:
@@ -390,9 +392,11 @@ def donwload_data(df, file_name):
 
 
 @st.cache_data()
-def load_data(file):
-    st.session_state['df'] = pd.read_excel(file, header=None)
-    return st.session_state['df']
+def load_data(file, sheet):
+    df = pd.read_excel(file, sheet_name=sheet, header=None)
+    return df
+
+
 
 @st.cache_data 
 def convert_df(df):
@@ -709,6 +713,142 @@ def threshold_count(matrix):
     
     return final_threshold
 
+@st.cache_data
+def threshold_count_2(matrix):
+    """
+    Method A: 무한급수(Infinite Series) 확장을 통한 네트워크 추출
+    구조: threshold_count 함수와 동일한 흐름 (계산 -> 시각화 -> 결과반환)
+    """
+    # -------------------------------------------------------------------------
+    # 0. 데이터 준비
+    # -------------------------------------------------------------------------
+    if hasattr(matrix, 'to_numpy'):
+        mat_data = matrix.to_numpy()
+    else:
+        mat_data = np.array(matrix)
+
+    A = mat_data.copy().astype(float)
+    np.fill_diagonal(A, 0) # 대각 성분 0 처리
+
+    n = A.shape[0]
+
+    # 파라미터 설정 (Pseudo-code 기준)
+    epsilon = 0.1          # 10% 기준
+    max_iter = 20          # 무한 루프 방지용 안전 장치
+
+    # 초기값 (k=0)
+    N_accum = np.zeros((n, n)) # N0
+    s_accum = 0.0              # s0
+
+    # 시각화를 위한 리스트
+    k_list = []
+    ratio_list = []
+    s_list = []
+
+    # -------------------------------------------------------------------------
+    # 1. Iteration: M(k) = A^k 및 Reduce 수행
+    # -------------------------------------------------------------------------
+    final_k = 0
+    converged = False
+
+    # k는 1부터 시작
+    for k in range(1, max_iter + 1):
+        # M(k) = A^k
+        try:
+            M_k = np.linalg.matrix_power(A, k)
+        except:
+            break # 수치적 발산 등 에러 시 중단
+
+        # s(k) 계산: 대각 성분 제외 원소 합
+        off_diag_mask = ~np.eye(n, dtype=bool)
+        vals = M_k[off_diag_mask]
+        s_k = np.sum(vals)
+
+        # av(k) 계산: 평균
+        if (n*n - n) > 0:
+            av_k = s_k / (n*n - n)
+        else:
+            av_k = 0
+
+        # "M(k) reduce": av(k)보다 작은 원소 0 처리 (Local Copy)
+        M_k_reduced = np.where(M_k < av_k, 0, M_k)
+
+        # Reduced 된 값 기준으로 s(k) 재계산 (누적을 위해)
+        vals_reduced = M_k_reduced[off_diag_mask]
+        s_k_reduced = np.sum(vals_reduced)
+
+        # ratio_change 계산
+        # Pseudo-code의 (s0 + s(k))/s0 논리는 항상 > 1 이므로,
+        # 수렴 판단을 위해 '새로 추가되는 정보량의 비율' (s_k / s0)로 해석하여 구현
+        if s_accum == 0:
+            ratio_change = 1.0 # 첫 턴은 무조건 진행
+        else:
+            ratio_change = s_k_reduced / s_accum
+
+        # 기록 저장
+        k_list.append(k)
+        ratio_list.append(ratio_change)
+        s_list.append(s_accum + s_k_reduced)
+
+        # 누적 수행: N0 = N0 + M(k), s0 = s0 + s(k)
+        N_accum = N_accum + M_k_reduced
+        s_accum = s_accum + s_k_reduced
+        final_k = k
+
+        # 종료 조건 (Convergence Check)
+        if k > 1 and ratio_change <= epsilon:
+            converged = True
+            break
+
+    # -------------------------------------------------------------------------
+    # 2. 시각화 (Dual Axis: Change Ratio vs Total Info)
+    # -------------------------------------------------------------------------
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    # [왼쪽 축] 변화율 (Convergence Ratio)
+    color1 = 'tab:red'
+    ax1.set_xlabel('Iteration (k)')
+    ax1.set_ylabel('Change Ratio (New/Total)', color=color1, fontweight='bold')
+    ax1.plot(k_list, ratio_list, color=color1, marker='o', label='Ratio Change', linewidth=2)
+    ax1.tick_params(axis='y', labelcolor=color1)
+    ax1.grid(True, alpha=0.3)
+
+    # Epsilon 기준선
+    ax1.axhline(y=epsilon, color='gray', linestyle='--', label=f'Epsilon ({epsilon})')
+
+    # [오른쪽 축] 누적 정보량 (Total Sum s0)
+    ax2 = ax1.twinx()
+    color2 = 'tab:blue'
+    ax2.set_ylabel('Accumulated Signal (s0)', color=color2, fontweight='bold')
+    ax2.plot(k_list, s_list, color=color2, linestyle='--', alpha=0.6, label='Total Signal (s0)')
+    ax2.tick_params(axis='y', labelcolor=color2)
+
+    # 범례 합치기
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
+
+    plt.title(f'Method A Convergence: Stopped at k={final_k}')
+    fig.tight_layout()
+    st.pyplot(fig)
+
+    # -------------------------------------------------------------------------
+    # 3. 사용자 선택 UI / 결과 안내
+    # -------------------------------------------------------------------------
+    status_msg = "수렴 완료 (Converged)" if converged else "최대 반복 도달 (Max Iter)"
+
+    st.markdown(f"""
+    **Method A 추출 결과**
+    - **최종 반복 횟수 (k)**: `{final_k}` ({status_msg})
+    - **최종 누적 정보량 (s0)**: `{s_accum:.4f}`
+    - **마지막 변화율**: `{ratio_list[-1]:.4f}` (목표: $\le {epsilon}$)
+    
+    💡 **설명:** 행렬의 거듭제곱($A^k$)을 통해 간접 연결을 탐색하며, 정보량 증가분이 {epsilon*100}% 이하가 될 때까지 네트워크를 누적했습니다.
+    """)
+
+    # 사용자가 원하는 network(행렬) 자체를 반환
+    return N_accum
+
 def calculate_kim_metrics(G, weight='weight'):
     """
     Kim (2021) 방식의 Constraint와 Efficiency를 계산하여 딕셔너리로 반환
@@ -798,3 +938,349 @@ def calculate_standard_metrics(G_directed, weight='weight'):
             std_efficiencies[n] = 0.0
             
     return std_constraints, std_efficiencies
+
+def build_leontief_outputs(
+    df_for_leontief: pd.DataFrame,
+    normalization_denominator_replaced,
+):
+    """
+      1) df_for_leontief_with_label  (라벨 포함 + 레온티에프 역행렬 L만, FL/BL 없음)
+      2) df_for_leontief_without_label (라벨 제거 + L만)
+      3) fl_bl (번호/부문명칭 + FL + BL)
+    """
+
+    # 1) with/without 준비 (너 코드 동일)
+    df_with_label = df_for_leontief.copy()
+    df_without_label = df_with_label.iloc[2:, 2:].copy()
+
+    # 2) A(tmp) 만들기: 숫자 변환 + 열 정규화 (너 코드 동일)
+    tmp = df_without_label.copy()
+    tmp = tmp.apply(pd.to_numeric, errors="coerce")
+    tmp = tmp.divide(normalization_denominator_replaced, axis=1)
+
+    # A를 with_label에 반영 (너 코드 동일)
+    df_with_label.iloc[2:, 2:] = tmp
+
+    # 3) 레온티에프 역행렬 L=(I-A)^-1 (너 코드 동일)
+    unit_matrix = np.eye(tmp.shape[0])
+    subtracted_matrix = unit_matrix - tmp
+    leontief = np.linalg.inv(subtracted_matrix.values)
+    leontief = pd.DataFrame(leontief)
+
+    # 4) (N+1)x(N+1)로 확장해서 FL/BL 계산 + 평균 정규화 (너 코드 동일)
+    leontief_rows, leontief_cols = leontief.shape
+    leontief_with_sums = np.zeros((leontief_rows + 1, leontief_cols + 1))
+    leontief_with_sums[:-1, :-1] = leontief.values
+    leontief_with_sums[-1, :-1] = leontief.sum(axis=0).values  # BL 원자료(열합)
+    leontief_with_sums[:-1, -1] = leontief.sum(axis=1).values  # FL 원자료(행합)
+
+    last_row_mean = leontief_with_sums[-1, :-1].mean()
+    leontief_with_sums[-1, :-1] /= last_row_mean
+
+    last_col_mean = leontief_with_sums[:-1, -1].mean()
+    leontief_with_sums[:-1, -1] /= last_col_mean
+
+    new_df = pd.DataFrame(leontief_with_sums)
+
+    # 5) current_df 확장 후, (2,2)부터 new_df 삽입 (너 코드 동일)
+    current_df = df_with_label
+    existing_rows = current_df.shape[0] - 2
+    existing_cols = current_df.shape[1] - 2
+
+    current_df = current_df.reindex(
+        index=range(existing_rows + 3),
+        columns=range(existing_cols + 3)
+    )
+
+    current_df.iloc[2:2 + new_df.shape[0], 2:2 + new_df.shape[1]] = new_df.values
+    current_df.iloc[1, -1] = "FL"
+    current_df.iloc[-1, 1] = "BL"
+
+    # 6) fl_bl 추출 (너 코드의 iloc 위치 그대로)
+    ids_col = current_df.iloc[1:-1, :2]
+    fl_data = current_df.iloc[1:-1, -1]
+    bl_data = current_df.iloc[-1, 1:-1]
+
+    fl_data = fl_data.to_frame(name="2")
+    bl_data = bl_data.to_frame(name="3")
+
+    ids_col = ids_col.reset_index(drop=True)
+    fl_data = fl_data.reset_index(drop=True)
+    bl_data = bl_data.reset_index(drop=True)
+
+    fl_bl = pd.concat([ids_col, fl_data, bl_data], axis=1)
+
+    # 7) 최종 with_label에서는 FL/BL 제거 (너 코드 동일)
+    df_for_leontief_with_label = current_df.iloc[:-1, :-1].copy()
+
+    # 8) 최종 without_label 갱신 (너 코드 동일)
+    df_for_leontief_without_label = df_for_leontief_with_label.iloc[2:, 2:].copy()
+
+    return df_for_leontief_with_label, df_for_leontief_without_label
+
+
+def apply_batch_edit(
+    *,
+    batch_df: pd.DataFrame,
+    df_curr: pd.DataFrame,
+    first_idx: tuple,
+    number_of_label: int,
+    mid_ID_idx: tuple,
+    ids_simbol: dict,
+    insert_row_and_col_fn,
+):
+    """
+    Inputs
+    ------
+    batch_df : columns = ['from','to','alpha','to_name']
+    df_curr  : 현재 df_editing
+    first_idx, number_of_label : 기존 그대로
+    mid_ID_idx : 현재 mid index
+    ids_simbol : 코드->이름 리스트 dict (공유/갱신)
+    insert_row_and_col_fn : 기존 함수 주입
+
+    Returns
+    -------
+    df_out, mid_out, ids_out, log_text
+    """
+
+    df_curr = df_curr.copy()
+    code_col_idx = first_idx[1] - number_of_label
+
+    log_lines = []
+
+    # -------------------------
+    # 1) to/to_name 기반 자동 산업 추가
+    # -------------------------
+    targets = batch_df[["to", "to_name"]].drop_duplicates()
+
+    for _, t in targets.iterrows():
+        new_code = str(t["to"])
+        new_name = str(t["to_name"]) if str(t["to_name"]) not in ["nan", "None"] else ""
+
+        exists = (df_curr.iloc[:, code_col_idx].astype(str) == new_code).any()
+        if exists:
+            if new_code not in ids_simbol:
+                ids_simbol[new_code] = []
+            if new_name and (new_name not in ids_simbol[new_code]):
+                ids_simbol[new_code].append(new_name)
+            continue
+
+        result = insert_row_and_col_fn(
+            df_curr,
+            first_idx,
+            mid_ID_idx,
+            new_code,
+            new_name if new_name else f"NEW_{new_code}",
+            number_of_label,
+        )
+
+        df_curr, mid_ID_idx = result[0], result[1]
+        # 원본 코드의 data_editing_log += result[2]
+        log_lines.append(str(result[2]).strip())
+
+        if new_code not in ids_simbol:
+            ids_simbol[new_code] = []
+        if new_name:
+            ids_simbol[new_code].append(new_name)
+
+    # -------------------------
+    # 2) from 기준 분배 이동
+    # -------------------------
+    grouped = batch_df.groupby("from")
+
+    for origin_code, group in grouped:
+        origin_indices = df_curr.index[df_curr.iloc[:, code_col_idx] == origin_code].tolist()
+        if len(origin_indices) != 1:
+            log_lines.append(f"Error: Origin Code '{origin_code}' 유일하지 않거나 없음. 스킵")
+            continue
+
+        origin_row_idx = origin_indices[0]
+        origin_col_idx = origin_row_idx - first_idx[0] + first_idx[1]
+
+        # snapshot
+        origin_row_data = df_curr.iloc[origin_row_idx, first_idx[1]:].copy()
+        origin_col_data = df_curr.iloc[first_idx[0]:, origin_col_idx].copy()
+
+        total_alpha = float(group["alpha"].sum())
+
+        for _, r in group.iterrows():
+            target_code = r["to"]
+            ratio = float(r["alpha"])
+
+            target_indices = df_curr.index[df_curr.iloc[:, code_col_idx] == target_code].tolist()
+            if len(target_indices) != 1:
+                log_lines.append(
+                    f"Error: Target Code '{target_code}' 유일하지 않거나 없음. ({origin_code}->{target_code} 스킵)"
+                )
+                continue
+
+            target_row_idx = target_indices[0]
+            target_col_idx = target_row_idx - first_idx[0] + first_idx[1]
+
+            df_curr.iloc[target_row_idx, first_idx[1]:] += origin_row_data * ratio
+            df_curr.iloc[first_idx[0]:, target_col_idx] += origin_col_data * ratio
+
+            log_lines.append(f"[Batch] {origin_code} -> {target_code}: {ratio*100:.2f}% 이동")
+
+        remaining_ratio = 1.0 - total_alpha
+        if abs(remaining_ratio) < 1e-9:
+            remaining_ratio = 0.0
+
+        df_curr.iloc[origin_row_idx, first_idx[1]:] = origin_row_data * remaining_ratio
+        df_curr.iloc[first_idx[0]:, origin_col_idx] = origin_col_data * remaining_ratio
+        log_lines.append(f"[Batch Info] {origin_code} 잔여: {remaining_ratio*100:.4f}%")
+
+    log_text = "\n".join([x for x in log_lines if x])
+
+    return df_curr, mid_ID_idx, ids_simbol, log_text
+
+def replay_edit_ops_on_df(
+    df_base: pd.DataFrame,
+    mid_ID_idx_base: Tuple[int, int],
+    ids_simbol_base: Dict[str, List[str]],
+    ops: List[Dict[str, Any]],
+    *,
+    first_idx: Tuple[int, int],
+    number_of_label: int,
+    insert_row_and_col_fn,
+    transfer_to_new_sector_fn,
+    remove_zero_series_fn,
+    reduce_negative_values_fn,
+    batch_apply_fn=None,          # apply_batch_edit 같은 함수 주입
+    copy_ids: bool = False,       # ids_simbol 공유 싫으면 True
+    return_log: bool = True,      # 디버깅/기록용 로그 반환
+):
+    """
+    ops를 순서대로 df_base에 다시 적용하여 df/mid/ids를 갱신해서 반환.
+    - st.session_state 의존 없음
+    - batch_apply는 batch_apply_fn이 주어졌을 때만 실행 가능
+
+    Returns
+    -------
+    (df, mid, ids) or (df, mid, ids, log_text)  (return_log=True일 때)
+    """
+
+    df = df_base.copy()
+    mid = mid_ID_idx_base
+    ids = deepcopy(ids_simbol_base) if copy_ids else ids_simbol_base
+
+    log_lines: List[str] = []
+
+    for i, op in enumerate(ops, start=1):
+        if "type" not in op:
+            raise KeyError(f"[op #{i}] missing key: 'type'")
+
+        t = op["type"]
+
+        # -------------------------
+        # 1) 산업 추가 (insert_row_and_col)
+        # -------------------------
+        if t == "insert_sector":
+            for k in ("code", "name"):
+                if k not in op:
+                    raise KeyError(f"[op #{i} insert_sector] missing key: '{k}'")
+
+            result = insert_row_and_col_fn(
+                df,
+                first_idx,
+                mid,
+                op["code"],
+                op["name"],
+                number_of_label,
+            )
+            df, mid = result[0], result[1]
+
+            # result[2] = 로그 문자열 (너 코드 기준)
+            if len(result) >= 3 and result[2]:
+                log_lines.append(str(result[2]).strip())
+
+            # ids 반영
+            c = str(op["code"])
+            n = str(op["name"])
+            if c not in ids:
+                ids[c] = []
+            if n and n not in ids[c]:
+                ids[c].append(n)
+
+        # -------------------------
+        # 2) 값 옮기기 (transfer_to_new_sector)
+        # -------------------------
+        elif t == "transfer":
+            for k in ("from", "to", "alpha"):
+                if k not in op:
+                    raise KeyError(f"[op #{i} transfer] missing key: '{k}'")
+
+            result = transfer_to_new_sector_fn(
+                df,
+                first_idx,
+                op["from"],
+                op["to"],
+                float(op["alpha"]),
+            )
+            df = result[0]
+
+            # result[1]이 로그라면 누적(너 함수가 그렇게 주면)
+            if return_log and len(result) >= 2 and result[1]:
+                log_lines.append(str(result[1]).strip())
+
+        # -------------------------
+        # 3) 0인 행/열 삭제 (remove_zero_series)
+        # -------------------------
+        elif t == "remove_zero":
+            result = remove_zero_series_fn(df, first_idx, mid)
+            df, mid = result[0], result[2]
+
+            if return_log and len(result) >= 2 and result[1]:
+                log_lines.append(str(result[1]).strip())
+
+        # -------------------------
+        # 4) 음수 절반 (reduce_negative_values)
+        # -------------------------
+        elif t == "reduce_negative":
+            # 네 기존 코드처럼 mid를 -1 해서 넘길지 여부
+            use_minus_one = bool(op.get("use_minus_one_mid", True))
+            mid_use = (mid[0] - 1, mid[1] - 1) if use_minus_one else mid
+
+            result = reduce_negative_values_fn(df, first_idx, mid_use)
+            df = result[0]
+
+            if return_log and len(result) >= 2 and result[1]:
+                log_lines.append(str(result[1]).strip())
+
+        # -------------------------
+        # 5) 배치 적용 (apply_batch_edit로 재실행)
+        # -------------------------
+        elif t == "batch_apply":
+            if "batch_records" not in op:
+                raise KeyError(f"[op #{i} batch_apply] missing key: 'batch_records'")
+            if batch_apply_fn is None:
+                raise ValueError(
+                    "[batch_apply] batch_apply_fn이 필요합니다. "
+                    "예: replay_edit_ops_on_df(..., batch_apply_fn=apply_batch_edit)"
+                )
+
+            batch_df = pd.DataFrame(op["batch_records"])
+
+            df, mid, ids, batch_log = batch_apply_fn(
+                batch_df=batch_df,
+                df_curr=df,
+                first_idx=first_idx,
+                number_of_label=number_of_label,
+                mid_ID_idx=mid,
+                ids_simbol=ids,
+                insert_row_and_col_fn=insert_row_and_col_fn,
+            )
+
+            if return_log and batch_log:
+                log_lines.append(str(batch_log).strip())
+
+        else:
+            raise ValueError(f"[op #{i}] Unknown op type: {t}")
+
+    if return_log:
+        log_text = "\n".join([x for x in log_lines if x])
+        return df, mid, ids, log_text
+
+    return df, mid, ids
+
