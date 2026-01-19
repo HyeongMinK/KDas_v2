@@ -367,21 +367,77 @@ def transfer_to_new_sector(df, first_idx, origin_code, target_code, ratio, code_
     msg = f'{ratio*100}% of {origin_code} has been moved to {target_code}.'
     return df_editing, msg
 
-def remove_zero_series(df, first_idx, mid_ID_idx):
+def remove_zero_series(
+    df: pd.DataFrame,
+    first_idx: tuple[int, int],
+    mid_ID_idx: tuple[int, int],
+    remove_positions: dict | None = None,
+):
+    """
+    - remove_positions가 None이면: 기존 로직대로 '0으로만 이뤄진 행'을 찾아 (대응되는 열)까지 삭제
+    - remove_positions가 주어지면: 해당 위치만 삭제
+
+    remove_positions / return_positions 형식(동일):
+      {
+        "zero_row_indices": [ ... ],   # df의 원본 index 기준 (drop에 바로 쓰는 값)
+        "zero_col_indices": [ ... ],   # df의 원본 column index 기준 (drop에 바로 쓰는 값)
+      }
+
+    return:
+      df_editing, msg, mid_ID_idx, removed_positions
+    """
+
     df_editing = df.copy()
-    df_test = df_editing.copy()
-    df_test = df_editing.iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors='coerce')
-    zero_row_indices = df_test.index[(df_test == 0).all(axis=1)].tolist()
-    zero_row_indices = [item for item in zero_row_indices if item>=first_idx[0] and item<=mid_ID_idx[0]]
-    zero_col_indices = list(map(lambda x: x - first_idx[0] + first_idx[1], zero_row_indices))
-    df_editing.drop(zero_row_indices, inplace=True)
-    df_editing.drop(zero_col_indices, inplace=True, axis=1)
+
+    # -------------------------
+    # 1) 삭제 위치 결정
+    # -------------------------
+    if remove_positions is None:
+        # 기존 로직: first_idx 이후 블록을 숫자로 보고, 행 전체가 0인 행 찾기
+        df_test = df_editing.iloc[first_idx[0]:, first_idx[1]:].apply(pd.to_numeric, errors="coerce")
+
+        zero_row_indices = df_test.index[(df_test == 0).all(axis=1)].tolist()
+        zero_row_indices = [i for i in zero_row_indices if first_idx[0] <= i <= mid_ID_idx[0]]
+
+        # 기존 로직: row index -> 대응되는 col index 매핑
+        zero_col_indices = [i - first_idx[0] + first_idx[1] for i in zero_row_indices]
+
+        removed_positions = {
+            "zero_row_indices": zero_row_indices,
+            "zero_col_indices": zero_col_indices,
+        }
+
+    else:
+        # 주어진 삭제 위치 사용 (형식 동일)
+        removed_positions = {
+            "zero_row_indices": list(remove_positions.get("zero_row_indices", [])),
+            "zero_col_indices": list(remove_positions.get("zero_col_indices", [])),
+        }
+
+    zero_row_indices = removed_positions["zero_row_indices"]
+    zero_col_indices = removed_positions["zero_col_indices"]
+
+    # -------------------------
+    # 2) 삭제 수행
+    # -------------------------
+    if len(zero_row_indices) > 0:
+        df_editing.drop(zero_row_indices, inplace=True)
+
+    if len(zero_col_indices) > 0:
+        df_editing.drop(zero_col_indices, inplace=True, axis=1)
+
+    # index/columns 리셋(너 기존 코드 유지)
     df_editing.columns = range(df_editing.shape[1])
     df_editing.index = range(df_editing.shape[0])
-    count = len(zero_col_indices)
-    msg = f'{count}개의 행(열)이 삭제되었습니다.'
+
+    # -------------------------
+    # 3) mid_ID_idx 업데이트 + msg
+    # -------------------------
+    count = len(zero_col_indices)  # 기존 로직: 삭제한 열 개수만큼 mid_ID_idx 줄임
+    msg = f"{count}개의 행(열)이 삭제되었습니다."
     mid_ID_idx = (mid_ID_idx[0] - count, mid_ID_idx[1] - count)
-    return df_editing, msg, mid_ID_idx
+
+    return df_editing, msg, mid_ID_idx, removed_positions
 
 def donwload_data(df, file_name):
     csv = convert_df(df)
@@ -1228,7 +1284,7 @@ def replay_edit_ops_on_df(
         # 3) 0인 행/열 삭제 (remove_zero_series)
         # -------------------------
         elif t == "remove_zero":
-            result = remove_zero_series_fn(df, first_idx, mid)
+            result = remove_zero_series_fn(df, first_idx, mid, remove_positions=op.get("remove_positions"))
             df, mid = result[0], result[2]
 
             if return_log and len(result) >= 2 and result[1]:
@@ -1284,3 +1340,19 @@ def replay_edit_ops_on_df(
 
     return df, mid, ids
 
+
+# 지표 열 만드는 함수
+def make_col(title: str, vec_1d: np.ndarray, colname: str) -> pd.DataFrame:
+    vec_1d = np.asarray(vec_1d, dtype=float).reshape(-1)
+    return pd.concat(
+        [
+            pd.DataFrame([title], columns=[colname]),
+            pd.Series(vec_1d).to_frame(name=colname)
+        ],
+        axis=0
+    ).reset_index(drop=True)
+
+# 지표 테이블 만드는 함수
+def make_table(base_df, cols: list[pd.DataFrame]) -> pd.DataFrame:
+    ids_col = base_df.iloc[1:, :2].reset_index(drop=True)
+    return pd.concat([ids_col] + cols, axis=1)
