@@ -293,11 +293,17 @@ def main():
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button('0인 행(열) 삭제'):
-                result = remove_zero_series(st.session_state['df_editing'], first_idx, st.session_state['mid_ID_idx'])
-                st.session_state['df_editing'] = result[0]
-                st.session_state['data_editing_log'] += (result[1] + '\n\n')
-                st.session_state['mid_ID_idx'] = result[2]
-                st.session_state['remove_positions'] = result[3]
+                df_editing_t, msg_t, mid_ID_idx_t, removed_positions_t = remove_zero_series(
+                    st.session_state['df_editing'],
+                    first_idx,
+                    st.session_state['mid_ID_idx']
+                )
+
+                st.session_state['df_editing'] = df_editing_t
+                st.session_state['data_editing_log'] += (msg_t + '\n\n')
+                st.session_state['mid_ID_idx'] = mid_ID_idx_t
+                st.session_state['remove_positions'] = removed_positions_t
+
 
                 st.session_state["edit_ops"].append({"type": "remove_zero", "remove_positions": st.session_state['remove_positions']})
                 st.session_state.show_edited = False
