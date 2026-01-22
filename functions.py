@@ -200,8 +200,8 @@ def calculate_network_centralities(G_bn, df_label, use_weight=False):
     cc_out_std = df_cc["Outdegree_Closeness Centrality"].std()
 
     # Eigenvector
-    evi_bn = nx.eigenvector_centrality(G_bn, max_iter=500, tol=1e-06, weight=weight_arg)
-    evo_bn = nx.eigenvector_centrality(G_bn.reverse(), max_iter=500, tol=1e-06, weight=weight_arg)
+    evi_bn = nx.eigenvector_centrality(G_bn, max_iter=2000, tol=1e-06, weight=weight_arg)
+    evo_bn = nx.eigenvector_centrality(G_bn.reverse(), max_iter=2000, tol=1e-06, weight=weight_arg)
 
     df_ev = df_label.iloc[2:, :2].copy()
     df_ev["Indegree_Eigenvector Centrality"] = pd.Series(evi_bn).sort_index().values.reshape(-1, 1)
