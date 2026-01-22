@@ -754,15 +754,15 @@ def threshold_count(matrix):
     # -------------------------------------------------------------------------
     msg_adjustment = ""
     if adjusted:
-        msg_adjustment = f"⚠️ 수학적 최적점(`{threshold_dist:.4f}`)에서 고립 노드가 발견되어, `{final_threshold:.4f}`로 하향 조정했습니다."
+        msg_adjustment = f"⚠️ 수학적 최적점(`{threshold_dist:.4f}`)에서 고립 노드가 발견되어, `{final_threshold:.4f}` 로 하향 조정했습니다."
     else:
         msg_adjustment = f"✅ 수학적 최적점(`{threshold_dist:.4f}`)이 고립 노드 없이 안정적입니다."
 
     st.markdown(f"""
     **최적 임계값 분석 결과**
-    - **Method 2 (Stability)**: `{threshold_method2:.4f}`
-    - **Method 2-1 (Dist Min)**: `{threshold_dist:.4f}` (Backtracking 시작점)
-    - **Final Decision**: `{final_threshold:.4f}`
+    - **Stability Criterion:** `{threshold_method2:.4f}`
+    - **Distance Min Criterion:** `{threshold_dist:.4f}` (Backtracking 시작점)
+    - **Final Decision:** `{final_threshold:.4f}`
     
     {msg_adjustment}
     """)
@@ -895,9 +895,9 @@ def threshold_count_2(matrix):
 
     st.markdown(f"""
     **Method A 추출 결과**
-    - **최종 반복 횟수 (k)**: `{final_k}` ({status_msg})
-    - **최종 누적 정보량 (s0)**: `{s_accum:.4f}`
-    - **마지막 변화율**: `{ratio_list[-1]:.4f}` (목표: $\le {epsilon}$)
+    - **최종 반복 횟수 (k):** `{final_k}` ({status_msg})
+    - **최종 누적 정보량 (s0):** `{s_accum:.4f}`
+    - **마지막 변화율:** `{ratio_list[-1]:.4f}` (목표: $\le {epsilon}$)
     
     💡 **설명:** 행렬의 거듭제곱($A^k$)을 통해 간접 연결을 탐색하며, 정보량 증가분이 {epsilon*100}% 이하가 될 때까지 네트워크를 누적했습니다.
     """)
