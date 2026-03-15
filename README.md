@@ -8,9 +8,9 @@
 
 ## 개요
 
-**KDasHboard**는 한국 산업연관표(Input-Output Table)를 업로드하여 레온티에프(Leontief) 모형 기반의 경제 분석과 네트워크 분석을 수행하는 Streamlit 대시보드입니다.
+**KDasHboard**는 한국 은행 산업연관표(Input-Output Table)를 업로드하여 레온티에프(Leontief) 모형 기반의 경제 분석과 네트워크 분석을 수행하는 Streamlit 대시보드입니다.
 
-이 도구의 핵심 기능은 **사용자가 직접 새로운 산업군을 정의하고 기존 산업을 재편한 뒤, 해당 신규 산업의 경제적 파급력(전방·후방 연관효과)을 정량적으로 분석**하는 것입니다. 예를 들어 기존 산업연관표에 존재하지 않는 신흥 산업(AI, 수소에너지 등)을 기존 섹터에서 분리·추가하여 그 파급 효과를 측정할 수 있습니다.
+이 도구의 핵심 기능은 **사용자가 직접 새로운 산업군을 정의하고 기존 산업을 재편한 뒤, 해당 신규 산업의 경제적 파급력(전방·후방 연관효과)을 정량적으로 분석**하는 것입니다. 예를 들어 기존 산업연관표에 존재하지 않는 신흥 산업(AI, TMT, M&E 등)을 기존 섹터에서 분리·추가하여 그 파급 효과를 측정할 수 있습니다.
 
 ---
 
@@ -67,8 +67,6 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-브라우저에서 `http://localhost:8501`로 접속합니다.
-
 ---
 
 ## 사용법
@@ -97,8 +95,8 @@ streamlit run app.py
 
 | 버전 | 기간 | 데이터 시작 위치 |
 |------|------|-----------------|
-| 한국 표준 | 2010–2020 | 행 6, 열 2 (`first_idx = (6, 2)`) |
-| 한국 구버전 | 1990–2005 | 행 5, 열 2 (`first_idx = (5, 2)`) |
+| 한국 표준 | 2010–2020 | 행 6, 열 2 |
+| 한국 구버전 | 1990–2005 | 행 5, 열 2 |
 | 수동 입력 | — | 사용자 직접 지정 |
 
 ---
@@ -126,10 +124,3 @@ xlrd
 networkx
 scipy
 ```
-
----
-
-## 방법론 및 참고문헌
-
-- **Leontief, W.** (1941). *The Structure of American Economy*. Harvard University Press.
-- **Kim, M.** (2021). Structural hole metrics based constraint & efficiency calculation method.
